@@ -24,7 +24,7 @@ PSQL = db_connection('psql')
 #PSQL.reset_db_con()
 cols = ['kd','ssa','sss','tsa','tss','sub','pas','rev','headssa','headsss','bodyssa', 'bodysss','legssa','legsss','disssa','dissss','clinssa','clinsss','gndssa','gndsss','tda','tds']
 
-def stats():
+def pull_stats():
     if os.path.exists(os.path.join(cur_path, 'stats.csv')):
         stats = pd.read_csv(os.path.join(cur_path, 'stats.csv'))
         stats.drop('Unnamed: 0', axis = 1, inplace = True)
@@ -59,7 +59,7 @@ def stats():
     return(stats)
 
 
-def avg_data(stats):
+def pull_avg_data(stats):
     if os.path.exists(os.path.join(cur_path, 'avg_data.csv')):
         avg_data = pd.read_csv(os.path.join(cur_path, 'avg_data.csv'))
         avg_data.drop('Unnamed: 0', axis = 1, inplace = True)
@@ -111,7 +111,7 @@ def avg_data(stats):
         avg_data.to_csv(os.path.join(cur_path, 'avg_data.csv'))
     return(avg_data)
     
-def adj_data(avg_data, stats):
+def pull_adj_data(avg_data, stats):
     if os.path.exists(os.path.join(cur_path, 'adj_data.csv')):
         adj_data = pd.read_csv(os.path.join(cur_path, 'adj_data.csv'))
         adj_data.drop('Unnamed: 0', axis = 1, inplace = True)
@@ -155,7 +155,7 @@ def adj_data(avg_data, stats):
         adj_data.to_csv(os.path.join(cur_path, 'adj_data.csv'))
     return(adj_data)
 
-def adj_avg_data(adj_data):
+def pull_adj_avg_data(adj_data):
     if os.path.exists(os.path.join(cur_path, 'adj_avg_data.csv')):
         adj_avg_data = pd.read_csv(os.path.join(cur_path, 'adj_avg_data.csv'))
         adj_avg_data.drop('Unnamed: 0', axis = 1, inplace = True)
@@ -208,10 +208,13 @@ def adj_avg_data(adj_data):
     return(adj_avg_data)
 
 
-def pred_data(avg_data, adj_avg_data):
-    if os.path.exists(os.path.join(cur_path, 'pred_data.csv')):
-        pred_data = pd.read_csv(os.path.join(cur_path, 'pred_data.csv'))
-        pred_data.drop('Unnamed: 0', inplace = True, axis = 1)
+def pull_pred_data(avg_data, adj_avg_data):
+    if os.path.exists(os.path.join(cur_path, 'pred_data_winner.csv')) and os.path.exists(os.path.join(cur_path, 'pred_data_length.csv')):
+        pred_data_winner = pd.read_csv(os.path.join(cur_path, 'pred_data_winner.csv'))
+        pred_data_winner.drop('Unnamed: 0', inplace = True, axis = 1)
+
+        pred_data_length = pd.read_csv(os.path.join(cur_path, 'pred_data_length.csv'))
+        pred_data_length.drop('Unnamed: 0', inplace = True, axis = 1)
         
     else:
         acc_stat_dict = {'acc_ss': ['ssa', 'sss'],
@@ -297,6 +300,9 @@ def pred_data(avg_data, adj_avg_data):
                     raise ValueError()
         winner = pd.DataFrame.from_dict(winner).T
         data = pd.merge(data, winner, left_on = ['bout_id', 'fighter_id'], right_on = ['bout_id', 'fighter_id'])
+
+        bout_len = pg_query(PSQL.client, "SELECT bout_id, length from ufc.bout_results")
+        bout_len.columns = ['bout_id', 'length'] 
         
         
         pred_data = {}
@@ -311,6 +317,8 @@ def pred_data(avg_data, adj_avg_data):
             bout_preds = {}
             for k,v in (bout_data.T[0] - bout_data.T[1]).to_dict().items():
                 bout_preds[k+'_diff'] = v
+            for k,v in ((bout_data.T[0] + bout_data.T[1])/2).to_dict().items():
+                bout_preds[k+'_avg'] = v                
             cur_cols = list(bout_data)
             for col in cur_cols:
                 if '_o_' in col:
@@ -326,17 +334,29 @@ def pred_data(avg_data, adj_avg_data):
             pred_data[bout] = bout_preds
             
         pred_data = pd.DataFrame.from_dict(pred_data).T
-        pred_data.to_csv(os.path.join(cur_path, 'pred_data.csv'))
-    return(pred_data)
+        pred_data.reset_index(inplace = True)
+        pred_data.rename(columns = {'index':'bout_id'}, inplace = True)
+        pred_data = pd.merge(pred_data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
+        pred_data.rename(columns = {'won_diff': 'winner'}, inplace = True)
+        pred_data.drop('won_avg', axis = 1, inplace = True)
+        
+        pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'winner']]
+        pred_data_length = pred_data[[i for i in list(pred_data) if i != 'length']]
+        
+        pred_data_winner.to_csv(os.path.join(cur_path, 'pred_data_winner.csv'))
+        pred_data_length.to_csv(os.path.join(cur_path, 'pred_data_length.csv'))
+        
+    return(pred_data_winner, pred_data_length)
 
 
 if __name__ == '__main__':
     stats = stats()
-    avg_data = avg_data(stats)
-    adj_data = adj_data(avg_data, stats)
-    adj_avg_data = adj_avg_data(adj_data)
-    pred_data = pred_data(avg_data, adj_avg_data)
+    avg_data = pull_avg_data(stats)
+    adj_data = pull_adj_data(avg_data, stats)
+    adj_avg_data = pull_adj_avg_data(adj_data)
+    pred_data_winner, pred_data_length = pull_pred_data(avg_data, adj_avg_data)
     
+    adsfasdfaf
     
     hold_cols = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id']
     pred_data = pred_data[[i for i in list(pred_data) if i not in hold_cols]]
