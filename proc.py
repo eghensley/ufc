@@ -340,8 +340,8 @@ def pull_pred_data(avg_data, adj_avg_data):
         pred_data.rename(columns = {'won_diff': 'winner'}, inplace = True)
         pred_data.drop('won_avg', axis = 1, inplace = True)
         
-        pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'winner']]
-        pred_data_length = pred_data[[i for i in list(pred_data) if i != 'length']]
+        pred_data_length = pred_data[[i for i in list(pred_data) if i != 'winner']]
+        pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'length']]
         
         pred_data_winner.to_csv(os.path.join(cur_path, 'pred_data_winner.csv'))
         pred_data_length.to_csv(os.path.join(cur_path, 'pred_data_length.csv'))
@@ -350,7 +350,7 @@ def pull_pred_data(avg_data, adj_avg_data):
 
 
 if __name__ == '__main__':
-    stats = stats()
+    stats = pull_stats()
     avg_data = pull_avg_data(stats)
     adj_data = pull_adj_data(avg_data, stats)
     adj_avg_data = pull_adj_avg_data(adj_data)
@@ -359,10 +359,10 @@ if __name__ == '__main__':
     adsfasdfaf
     
     hold_cols = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id']
-    pred_data = pred_data[[i for i in list(pred_data) if i not in hold_cols]]
+    pred_data_winner = pred_data_winner[[i for i in list(pred_data_winner) if i not in hold_cols]]
     
-    X = pred_data[[i for i in list(pred_data) if i != 'won_diff']]
-    Y = pred_data['won_diff'].apply(lambda x: x if x == 1 else 0)
+    X = pred_data_winner[[i for i in list(pred_data_winner) if i != 'won_diff']]
+    Y = pred_data_winner['won_diff'].apply(lambda x: x if x == 1 else 0)
     Y.mean()
     
     
