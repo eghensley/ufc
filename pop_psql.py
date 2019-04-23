@@ -74,7 +74,7 @@ def pop_corners():
     for fight_id, fight_name, fight_date in all_fights.values[2:]:
         if 'Fight Night' in fight_name:
             if fight_id == '6546af7ab545b90c':
-                url == 'https://www.ufc.com/event/ufc-fight-night-czech-republic-2019'
+                url = 'https://www.ufc.com/event/ufc-fight-night-czech-republic-2019'
                 page = requests.get(url)
             elif fight_id == '84283233ec42be5f':
                 url = 'https://www.ufc.com/event/ufc-fight-night-brazil-2019'
@@ -161,22 +161,22 @@ def pop_corners():
         
         
         
-def pop_bout_fighter_xref():
-    bout_data = pg_query(PSQL.client, 'select bout_id, winner, loser from ufc.bout_results;')
-    bout_data.rename(columns = {0: 'bout_id', 1: 'winner', 2: 'loser'}, inplace = True)
-    for bout, winner, loser in bout_data.values:
-        script = "INSERT INTO ufc.bout_fighter_xref(\
-                    bout_id, fighter_id, opponent_id)\
-                    	VALUES ('%s', '%s', '%s');" % (bout, winner, loser)
-        pg_insert(PSQL.client, script) 
-        script = "INSERT INTO ufc.bout_fighter_xref(\
-                    bout_id, fighter_id, opponent_id)\
-                    	VALUES ('%s', '%s', '%s');" % (bout, loser, winner)
-        pg_insert(PSQL.client, script) 
+#def pop_bout_fighter_xref():
+#    bout_data = pg_query(PSQL.client, 'select bout_id, winner, loser from ufc.bout_results;')
+#    bout_data.rename(columns = {0: 'bout_id', 1: 'winner', 2: 'loser'}, inplace = True)
+#    for bout, winner, loser in bout_data.values:
+#        script = "INSERT INTO ufc.bout_fighter_xref(\
+#                    bout_id, fighter_id, opponent_id)\
+#                    	VALUES ('%s', '%s', '%s');" % (bout, winner, loser)
+#        pg_insert(PSQL.client, script) 
+#        script = "INSERT INTO ufc.bout_fighter_xref(\
+#                    bout_id, fighter_id, opponent_id)\
+#                    	VALUES ('%s', '%s', '%s');" % (bout, loser, winner)
+#        pg_insert(PSQL.client, script) 
 
 
 def pop_bout_stats():
-    all_bouts = pg_query(PSQL.client, 'select bout_id from ufc.bouts')
+    all_bouts = pg_query(PSQL.client, 'select b.bout_id from ufc.bouts b full join ufc.bout_stats bs on bs.bout_id = b.bout_id where bs.bout_id is NULL')
     all_fighters = pg_query(PSQL.client, "select fighter_id from ufc.fighters;")
     all_fighters = set([i[0] for i in all_fighters.values]) 
     for bout in all_bouts.values:
@@ -254,12 +254,15 @@ def pop_bout_stats():
     
 
 def pop_bout_res():
-    modern_fights = pg_query(PSQL.client, "select fight_id from ufc.fights where date > '1-1-2002';")
+    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id full join ufc.bout_results br on br.bout_id = b.bout_id where date > '1-1-2002' and br.bout_id is NULL;")
     method_dict = pg_query(PSQL.client, "select * from ufc.methods;")
     method_dict = {v:k for k,v in method_dict.values}
     all_fighters = pg_query(PSQL.client, "select fighter_id from ufc.fighters;")
     all_fighters = set([i[0] for i in all_fighters.values])    
-    for fight_id in modern_fights[0].values[1:]:
+    
+    all_bouts = pg_query(PSQL.client, "select bout_id from ufc.bout_results")
+    all_bouts = set([i[0] for i in all_bouts.values])
+    for fight_id in modern_fights[0].unique():
         url = 'http://www.ufcstats.com/event-details/%s' % (fight_id)
         page = requests.get(url)
         tree = html.fromstring(page.content)
@@ -271,8 +274,10 @@ def pop_bout_res():
         methods = [i.strip() for i in methods]
         
         rounds = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[9]/p/text()')
-        rounds = [int(i.strip()) for i in rounds]
-        
+        try:
+            rounds = [int(i.strip()) for i in rounds]
+        except:
+            continue
         times = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[10]/p/text()')
         times = [i.strip() for i in times]
         minutes = [int(i.split(':')[0]) for i in times]
@@ -290,6 +295,8 @@ def pop_bout_res():
             if fighter[0] not in all_fighters or fighter[1] not in all_fighters:
                 continue
             
+            if bout in all_bouts:
+                continue
             script = "INSERT INTO ufc.bout_results(\
                         	bout_id, winner, loser, method_id, rounds, time, length)\
                         	VALUES ('%s', '%s', '%s', %i, %i, %i, %i);" % (bout, fighter[0], fighter[1], method_dict[method], rnd, time, length)
@@ -297,7 +304,7 @@ def pop_bout_res():
                 
             
 def pop_bouts():
-    modern_fights = pg_query(PSQL.client, "select fight_id from ufc.fights where date > '1-1-2002';")
+    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id where date > '1-1-2002' and b.fight_id is NULL;")
     #method_dict = pg_query(PSQL.client, "select * from ufc.methods;")
     #method_dict = {v:k for k,v in method_dict.values}
     wc_dict = pg_query(PSQL.client, "select * from ufc.weights;")
@@ -305,7 +312,7 @@ def pop_bouts():
     
     champ_icon = 'http://1e49bc5171d173577ecd-1323f4090557a33db01577564f60846c.r80.cf1.rackcdn.com/belt.png'
     
-    for fight_id in modern_fights[0].values[1:]:
+    for fight_id in modern_fights[0].values:
         url = 'http://www.ufcstats.com/event-details/%s' % (fight_id)
         page = requests.get(url)
         tree = html.fromstring(page.content)
@@ -329,24 +336,12 @@ def pop_bouts():
                         	bout_id, fight_id, weight_id, champ)\
                         	VALUES ('%s', '%s', %i, %s);" % (bout, fight_id, wc_dict[weight.replace("'", '')], champ)
             pg_insert(PSQL.client, script)    
-            
-        
-        
-        
-        
-        
-
-      
-
-
-
-
 
 
 def pop_wc_meth():
     all_weight_class = []
     all_methods = []
-    modern_fights = pg_query(PSQL.client, "select fight_id from ufc.fights where date > '1-1-2002';")
+    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id where date > '1-1-2002' and b.fight_id is NULL;")
     all_fighters = pg_query(PSQL.client, "select fighter_id from ufc.fighters;")
     all_fighters = set([i[0] for i in all_fighters.values])
     for fight_id in modern_fights[0].values[1:]:
@@ -369,15 +364,25 @@ def pop_wc_meth():
     meth_set = set(all_methods)
     
     wc_id = 0
+    
+    cur_wc = pg_query(PSQL.client, 'Select weight_id, weight_desc from ufc.weights')
+    wc_dict = {k:j for j,k in cur_wc.values}
+    wc_id = max(wc_dict.values()) + 1
     for wc in wc_set:
+        if wc in wc_dict.keys():
+            continue
         script = "INSERT INTO ufc.weights(\
                     	weight_id, weight_desc)\
                     	VALUES (%i, '%s');" % (wc_id, wc.replace("'",''))
         pg_insert(PSQL.client, script)        
         wc_id += 1
         
-    meth_id = 0
+    cur_meth = pg_query(PSQL.client, 'Select method_id, method_desc from ufc.methods')
+    meth_dict = {k:j for j,k in cur_meth.values}
+    meth_id = max(meth_dict.values()) + 1
     for meth in meth_set:
+        if meth in meth_dict.keys() or meth == '':
+            continue
         script = "INSERT INTO ufc.methods(\
                     	method_id, method_desc)\
                     	VALUES (%i, '%s');" % (meth_id, meth)
@@ -385,35 +390,8 @@ def pop_wc_meth():
         meth_id += 1
 
     
-#def pop_bouts():
-#    modern_fights = pg_query(PSQL.client, "select fight_id from ufc.fights where date > '1-1-2002';")
-#    all_fighters = pg_query(PSQL.client, "select fighter_id from ufc.fighters;")
-#    all_fighters = set([i[0] for i in all_fighters.values])
-#    for fight_id in modern_fights[0].values[1:]:
-#        url = 'http://www.ufcstats.com/event-details/%s' % (fight_id)
-#        page = requests.get(url)
-#        tree = html.fromstring(page.content)
-#        bouts = tree.xpath('/html/body/section/div/div/table/tbody/tr/@data-link')
-#        bouts = [i.replace('http://www.ufcstats.com/fight-details/', '') for i in bouts]
-#        fighters = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[2]/p/a/@href')
-#        fighters = [i.replace('http://www.ufcstats.com/fighter-details/','') for i in fighters]
-#        fighters = [fighters[i: i+2] for i in range(0, len(fighters), 2)]
-#        
-#        for bout, fighter in zip(bouts, fighters):
-#            if fighter[0] not in all_fighters or fighter[1] not in all_fighters:
-#                continue
-#            script = "INSERT INTO ufc.bouts(\
-#                        	bout_id, fight_id, fighter_id, opponent_id)\
-#                        	VALUES ('%s', '%s', '%s', '%s');" % (bout, fight_id, fighter[0], fighter[1])
-#            pg_insert(PSQL.client, script)
-#            script = "INSERT INTO ufc.bouts(\
-#                        	bout_id, fight_id, fighter_id, opponent_id)\
-#                        	VALUES ('%s', '%s', '%s', '%s');" % (bout, fight_id, fighter[1], fighter[0])
-#            pg_insert(PSQL.client, script)        
-
-    
 def pop_fighters():
-    modern_fights = pg_query(PSQL.client, "select fight_id from ufc.fights where date > '1-1-2002';")
+    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id where date > '1-1-2002' and b.fight_id is NULL;")
     all_fighters = pg_query(PSQL.client, "select fighter_id from ufc.fighters;")
     all_fighters = [i for i in all_fighters[0].values]
     for fight_id in modern_fights[0].values:
@@ -488,9 +466,9 @@ def pop_fights():
     dates = [i.strip() for i in dates]
     dates = [datetime.strptime(i, '%B %d, %Y') for i in dates]
     
-    
-    country_dict = {}
-    country_id = 0
+    cur_countries = pg_query(PSQL.client, 'Select * from ufc.countries')
+    country_dict = {k:j for j,k in cur_countries.values}
+    country_id = max(country_dict.values()) + 1
     for country in countries:
         if country in country_dict.keys():
             continue
@@ -502,8 +480,9 @@ def pop_fights():
         country_id += 1
         
         
-    state_dict = {}
-    state_id = 0
+    cur_states = pg_query(PSQL.client, 'Select state_id, state_name from ufc.states')
+    state_dict = {k:j for j,k in cur_states.values}
+    state_id = max(state_dict.values()) + 1
     for state, country in zip(states, countries):
         if state == '':
             continue
@@ -517,8 +496,9 @@ def pop_fights():
         state_id += 1  
         
     
-    city_dict = {}
-    city_id = 0
+    cur_cities = pg_query(PSQL.client, 'Select city_id, city_name from ufc.cities')
+    city_dict = {k:j for j,k in cur_cities.values}
+    city_id = max(city_dict.values()) + 1
     for city, state, country in zip(cities, states, countries):
         if city in city_dict.keys():
             continue
@@ -535,8 +515,12 @@ def pop_fights():
         city_id += 1  
     
     
-    
+    cur_fights = pg_query(PSQL.client, 'Select fight_id from ufc.fights')
+    cur_fights = set([i[0] for i in cur_fights.values])
     for fight_id, name, country, state, city, date in zip(ids, names, countries, states, cities, dates):
+        if fight_id in cur_fights:
+            continue
+
         if state == '':
             use_state = 'Null'
         else:
