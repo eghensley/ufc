@@ -15,11 +15,13 @@ from sklearn.linear_model import LogisticRegression
 from utils import _save_model, stage_init, test_solver, test_scaler,\
      init_feat_selection, feat_selection, C_parameter_tuning,\
      svc_hyper_parameter_tuning, lgb_find_lr, lgb_tree_params,\
-     lgb_drop_lr
+     lgb_drop_lr, forest_params, rf_trees, feat_selection_2,\
+     knn_hyper_parameter_tuning
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier     
 import lightgbm as lgb
-     
+from sklearn.ensemble import RandomForestClassifier
+
 pred_data_winner = pd.read_csv(os.path.join(cur_path, 'pred_data_winner.csv'))
 pred_data_winner.drop('Unnamed: 0', inplace = True, axis = 1)
 pred_data_winner.set_index('bout_id', inplace = True)
@@ -116,7 +118,7 @@ def tune_rbfsvc():
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, list(X), final = False)
         
     elif stage == 1: 
-        rbfsvc_checkpoint_score, features = feat_selection(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, 24, -1, False)
+        rbfsvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, 24, -1, False)
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -132,10 +134,44 @@ def tune_rbfsvc():
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, features, final = False)
 
     elif stage == 5:
-        rbfsvc_checkpoint_score, features = feat_selection(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, 10, -1, False)
+        rbfsvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, 10, -1, False)
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, features, final = True)
                        
 
+def tune_polysvc():
+    name = 'PolySVC'
+    dimension = 'winner'
+    
+    stage, polysvc_clf, scale, features, polysvc_checkpoint_score = stage_init(name, dimension)
+    
+    if stage == 0:
+        polysvc_clf = SVC(random_state = 1108, class_weight = 'balanced', kernel = 'poly', probability = True)
+        polysvc_checkpoint_score = -np.inf
+#        features = init_feat_selection(X, Y, rbfsvc_clf)
+        scale, polysvc_checkpoint_score = test_scaler(polysvc_clf, X, Y) 
+        _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, list(X), final = False)
+        
+    elif stage == 1: 
+        polysvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvc_clf, polysvc_checkpoint_score, 24, -1, False)
+        _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = False)
+    
+    elif stage == 2:
+        scale, polysvc_checkpoint_score = test_scaler(polysvc_clf, X[features], Y) 
+        _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = False)
+            
+    elif stage == 3:
+        polysvc_clf, polysvc_checkpoint_score = svc_hyper_parameter_tuning(X[features], Y, polysvc_clf, scale, polysvc_checkpoint_score)
+        _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = False)
+    
+    elif stage == 4:
+        scale, polysvc_checkpoint_score = test_scaler(polysvc_clf, X[features], Y) 
+        _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = False)
+
+    elif stage == 5:
+        polysvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvc_clf, polysvc_checkpoint_score, 10, -1, False)
+        _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = True)
+             
+        
 def tune_lgb():
     name = 'LightGBM'
     dimension = 'winner'
@@ -149,7 +185,7 @@ def tune_lgb():
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        lgb_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_clf, lgb_checkpoint_score, 24, -1, False)
+        lgb_checkpoint_score, features = feat_selection_2(X[features], Y, scale, lgb_clf, lgb_checkpoint_score, 24, -1, False)
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -198,7 +234,7 @@ def tune_dart():
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        dart_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_clf, dart_checkpoint_score, 24, -1, False)
+        dart_checkpoint_score, features = feat_selection_2(X[features], Y, scale, dart_clf, dart_checkpoint_score, 24, -1, False)
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -234,30 +270,88 @@ def tune_dart():
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = True)
 
 
+
+def tune_rf():
+    name = 'RFclass'
+    dimension = 'winner'
+    
+    stage, rf_clf, scale, features, rf_checkpoint_score = stage_init(name, dimension)
+    
+    if stage == 0:
+        rf_clf = RandomForestClassifier(random_state = 1108, n_estimators = 100)
+        rf_checkpoint_score = -np.inf    
+        scale, rf_checkpoint_score = test_scaler(rf_clf, X, Y) 
+        _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, list(X), final = False)
+
+    elif stage == 1: 
+        rf_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rf_clf, rf_checkpoint_score, 24, -1, False)
+        _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
+
+    elif stage == 2:
+        scale, rf_checkpoint_score = test_scaler(rf_clf, X[features], Y) 
+        _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
+          
+    elif stage == 3: 
+        rf_clf, rf_checkpoint_score = forest_params(X[features], Y, rf_clf, scale, rf_checkpoint_score, iter_ = 1000)
+        _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
+
+    elif stage == 4:
+        scale, rf_checkpoint_score = test_scaler(rf_clf, X[features], Y) 
+        _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
+
+    elif stage == 5: 
+        rf_checkpoint_score, features = feat_selection(X[features], Y, scale, rf_clf, rf_checkpoint_score, 24, -1, False)
+        _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
+
+    elif stage == 6:
+        rf_clf, rf_checkpoint_score = rf_trees(X, Y, scale, rf_clf, rf_checkpoint_score)
+        _save_model(stage, dimension, name, rf_clf, scale, rf_checkpoint_score, features, final = True)
+        
+
+
+def tune_knn():
+    name = 'KNN'
+    dimension = 'winner'
+    
+    stage, knn_clf, scale, features, knn_checkpoint_score = stage_init(name, dimension)
+    
+    if stage == 0:
+        knn_clf = KNeighborsClassifier()
+        knn_checkpoint_score = -np.inf
+#        features = init_feat_selection(X, Y, rbfsvc_clf)
+        scale, knn_checkpoint_score = test_scaler(knn_clf, X, Y) 
+        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, list(X), final = False)
+        
+    elif stage == 1: 
+        knn_checkpoint_score, features = feat_selection_2(X[features], Y, scale, knn_clf, knn_checkpoint_score, 24, -1, False)
+        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = False)
+    
+    elif stage == 2:
+        scale, knn_checkpoint_score = test_scaler(knn_clf, X[features], Y) 
+        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = False)
+            
+    elif stage == 3:
+        knn_clf, knn_checkpoint_score = knn_hyper_parameter_tuning(X[features], Y, knn_clf, scale, knn_checkpoint_score)
+        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = False)
+    
+    elif stage == 4:
+        scale, knn_checkpoint_score = test_scaler(knn_clf, X[features], Y) 
+        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = False)
+
+    elif stage == 5:
+        knn_checkpoint_score, features = feat_selection_2(X[features], Y, scale, knn_clf, knn_checkpoint_score, 10, -1, False)
+        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = True)
+
+
+     
 if __name__ == '__main__':
     for i in range(10):
         tune_lgb()
         tune_log()
         tune_linsvc()
-#        tune_rbfsvc()
+        tune_rbfsvc()
         tune_dart()
-        
-    #def tune_knn():
-#    name = 'KNN'
-#    dimension = 'winner'
-#    
-#    stage, knn_clf, scale, features, knn_checkpoint_score = stage_init(name, dimension)
-#    
-#    if stage == 0:
-#        knn_clf = KNeighborsClassifier()
-#        knn_checkpoint_score = -np.inf
-#        scale, knn_checkpoint_score = test_scaler(knn_clf, X, Y) 
-#        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, list(X), final = False)
-#    
-#    elif stage == 1: 
-#        features = init_feat_selection(X, Y, LogisticRegression(max_iter = 1000, random_state = 1108, class_weight = 'balanced'), thresh = 'mean')
-#        scale, knn_checkpoint_score = test_scaler(knn_clf, X[features], Y) 
-#        _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = False)
-#        
-
+        tune_rf()
+        tune_polysvc()
+        tune_knn()
 

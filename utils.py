@@ -19,7 +19,7 @@ import numpy as np
 
 #import lightgbm as lgb
 import importlib
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.utils import class_weight
 from sklearn.externals import joblib
 from sklearn.metrics import log_loss, mean_squared_error
@@ -34,6 +34,7 @@ from progress_bar import progress
 import pandas as pd
 from sklearn.feature_selection import SelectFromModel
 import lightgbm
+from sklearn.linear_model import LogisticRegression, Lasso
 
 def ensure_dir(file_path):
     """ Create directory if doesn't exist """
@@ -45,7 +46,11 @@ def ensure_dir(file_path):
     
 def cross_validate(x,y,est,scaler, only_scores = False, njobs = -1, verbose = False): 
 #    x,y,est,scaler, only_scores, njobs, verbose = X,Y,model,scale, True, -1, True
-    splitter = StratifiedKFold(n_splits = 8, random_state = 53)
+    if len(y.unique()) == 2:
+        splitter = StratifiedKFold(n_splits = 8, random_state = 53)
+    else:
+        splitter = KFold(n_splits = 8, random_state = 53)
+        
     if est.__class__ == lightgbm.sklearn.LGBMClassifier:
         njobs = 1
 
@@ -405,7 +410,54 @@ def feat_selection(x, y, scale, model, prev_score, _iter = 24, njobs = -1, verbo
         return(prev_score, list(x))
         
         
+def feat_selection_2(x, y, scale, model, prev_score, _iter = 24, njobs = -1, verbose = False):
+#    x, y, scale, model, prev_score, _iter, njobs, verbose = X[features], Y, scale, rbfsvr_reg, rbfsvr_checkpoint_score, 24, -1, False
+    print('Searching for best features.')
 
+    scaleX = scale.fit_transform(x)
+    scaleX = pd.DataFrame(scaleX)
+    scaleX.columns = list(x)
+    n_cols = len(list(scaleX))
+    
+    def _rfe(inputs):
+        _model, _n_col, _x, _y = inputs
+        if len(_y.unique()) == 2:
+            rfe_model = LogisticRegression(random_state = 1108)
+        else:
+            rfe_model = Lasso(random_state = 1108)
+        selector = RFE(rfe_model, _n_col, step=1)
+        selector.fit(_x, _y)
+        return([i for i,j in zip(list(_x), selector.support_) if j])
+        
+    if _iter > n_cols:
+        _iter = n_cols
+        
+    rfe_jobs = []
+    for n_col in sample(range(n_cols), _iter):
+        if n_col == 0:
+            continue
+        rfe_jobs.append([model, n_col, scaleX, y])
+    
+    feat_options = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_rfe) (i) for i in rfe_jobs)
+
+    cur_iter = 0
+    sig_feats = {}
+    for feats in feat_options:
+        if not verbose:
+            progress(cur_iter, _iter)    
+        feat_score = cross_validate(x[feats],y,model,scale,only_scores=True, verbose = verbose)
+        
+        sig_feats[cur_iter] = {'features': feats,
+                             'score': feat_score}
+        cur_iter += 1
+
+    best_combination = max(sig_feats, key =lambda x: sig_feats[x]['score'])
+    if sig_feats[best_combination]['score'] > prev_score:
+        return(sig_feats[best_combination]['score'], sig_feats[best_combination]['features'])
+    else:
+        return(prev_score, list(x))
+        
+        
 def random_search(x, y, model, params, _scale, trials = 25, verbose = False):  
 #    x, y, model, params, _scale, trials, verbose = x, y, model, {'C':  np.logspace(-2, 2, 5)}, scale, iter_, False
     def _rand_shuffle(choices):
@@ -568,8 +620,38 @@ def check_lr(_x, _y, _scale, _clf, _lr, _verbose = False):
     return (scores)
     
     
+def rf_trees(x, y, scale, clf, prev_score, verbose = True):  
+#    x, y, scale, clf, prev_score, verbose = X, Y, scale, rf_reg, rf_checkpoint_score, True
+    print('Setting best trees for Random Forest.')
+    model = deepcopy(clf)
+    scores = {}
+    
+    start_score = cross_validate(x, y, model, scale, only_scores=True, verbose = verbose)
+    scores[100] = start_score
+    new_trees = 100
+
+    add_trees = True
+    while add_trees:
+        new_trees *= 1.5
+
+        new_score = cross_validate(x, y, model.set_params(**{'n_estimators':int(new_trees)}), scale, only_scores=True, verbose = verbose)
+        if verbose:
+            print('Trees: %i' % (new_trees))
+            print('   Score: %.3f' % (new_score))
+        
+        if new_score > scores[new_trees/1.5]:
+            scores[new_trees] = new_score
+        else:
+            add_trees = False
+            
+    if scores[new_trees/1.5] > prev_score:
+        return(model.set_params(**{'n_estimators':int(new_trees)}), scores[new_trees/1.5])
+    else:
+        return(clf, prev_score)
+
+
 def lgb_find_lr(_model, x, y, scale, start_score, lr_ = .1, verbose = True):
-#    _model, x, y, scale, start_score, lr_, verbose = lgb_clf, X[features], Y, scale, lgb_checkpoint_score, .1, True
+#    _model, x, y, scale, start_score, lr_, verbose = lgb_reg, X[features], Y, scale, lgbr_checkpoint_score, .1, True
     print('Searching for best learning rate')
     # Deepcopy model to change parameters
     model = deepcopy(_model)
@@ -591,13 +673,36 @@ def lgb_find_lr(_model, x, y, scale, start_score, lr_ = .1, verbose = True):
         param_search[tree_iter] = {'lr':new_lr, 'best_trees': best_trees, '100_score':score[100], 'best_score': best_score, 'sensitivity': param_search[tree_iter-1]['sensitivity']} 
         if param_search[tree_iter]['100_score'] < param_search[tree_iter-1]['100_score']:
             tree_iter += 1
-            param_search[tree_iter] = param_search[tree_iter-2]
+            param_search[tree_iter] = deepcopy(param_search[tree_iter-2])
             param_search[tree_iter]['sensitivity'] *= .75
         if param_search[tree_iter]['best_trees'] == 100:
             search_trees = False
+        if tree_iter == 200:
+            search_trees = False    
 
     return(model.set_params(**{'learning_rate':param_search[tree_iter]['lr']}), param_search[tree_iter]['best_score'])
 
+
+def knn_hyper_parameter_tuning(x, y, clf, scale, score, iter_ = 1000):
+#    x,y,clf,scale,score, iter_ = X[features], Y, knn_clf, scale, knn_checkpoint_score, 10
+    # Deepcopy model to change parameters    
+    model = deepcopy(clf)
+    print('Searching hyper parameters')
+    # Initiate grid of possible parameters and values to search
+    param_dist = {'weights':  ['uniform', 'distance'],
+                     'algorithm': ['ball_tree', 'kd_tree'],
+                     'leaf_size': [int(i) for i in range(10, 100)],
+                     'n_neighbors': [int(i) for i in range(2, 100)]}
+    
+    # Perform random hyper-parameter search to find best combination
+    results = random_search(x, y, model, param_dist, scale, trials = iter_)  
+    print('Hyperparameter iteration LogLoss: %.5f' % (results['score']))
+    
+    if results['score'] < score:
+        return(clf, score)
+    else:
+        return(clf.set_params(**results['parameters']), results['score'])   
+    
 
 def svc_hyper_parameter_tuning(x, y, clf, scale, score, iter_ = 25):
 #    x,y,clf,scale,score, iter_ = X[features], Y, rbfsvc_clf, scale, rbfsvc_checkpoint_score, 25
@@ -632,7 +737,47 @@ def C_parameter_tuning(x, y, clf, scale, score, iter_ = 5):
         return(clf, score)
     else:
         return(model.set_params(**results['parameters']), results['score'])
+
+
+def alpha_parameter_tuning(x, y, clf, scale, score, iter_ = 5):
+#    x, y, clf, scale, score, iter_ = X[features], Y, log_clf, scale, log_checkpoint_score, 5
+    print('Searching for optimal alpha parameter')
+    # Deepcopy model to change parameters
+    model = deepcopy(clf)
+    
+    # Perform random hyper-parameter search to find best combination
+    results = random_search(x, y, model, {'alpha':  np.logspace(-2, 2, 5)}, scale, trials = iter_)  
+    print('Hyperparameter iteration LogLoss: %.5f' % (results['score']))
+    
+    if results['score'] < score:
+        return(clf, score)
+    else:
+        return(model.set_params(**results['parameters']), results['score'])
+     
         
+def forest_params(x, y, clf, scale, score, iter_ = 500):
+#    x,y,clf,scale,score, iter_ = X[features], Y, lgb_clf, scale, lgb_checkpoint_score, 25
+
+    print('Setting tree parameters')
+    # Deepcopy model to change parameters    
+    model = deepcopy(clf)
+    # Initiate grid of possible parameters and values to search
+    param_dist = {'max_features': [None, 'sqrt', 'log2', .2,.3,.4,.5,.6,.7,.8,.9],
+                  'max_depth': [3,5,8,10,12,15,20,25,30,None],
+                  'criterion': ['gini', 'entropy'],
+                  'min_samples_split': [int(i) for i in range(2, 50)]}
+    
+    # Perform random hyper-parameter search to find best combination
+    results = random_search(x, y, model, param_dist, scale, trials = iter_)  
+        
+    print('Iteration LogLoss: %.5f' % (results['score']))
+    # IF a comparison score is provided, return Boolean of if improvement occured,
+    # model, and score
+    if results['score'] < score:
+        return(clf, score)
+    else:
+        return(clf.set_params(**results['parameters']), results['score'])           
+
         
 def lgb_tree_params(x, y, clf, scale, score, iter_ = 250):
 #    x,y,clf,scale,score, iter_ = X[features], Y, lgb_clf, scale, lgb_checkpoint_score, 25
