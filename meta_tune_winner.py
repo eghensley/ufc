@@ -309,7 +309,7 @@ def tune_dartr():
 if __name__ == '__main__':
     for meta_dimension in pred_cols:
         Y = winner_res_data[meta_dimension]
-        for i in range(1):
+        for i in range(10):
             tune_lgr()
             tune_linsvr()
             tune_dartr()
