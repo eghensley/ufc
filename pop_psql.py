@@ -254,7 +254,10 @@ def pop_bout_stats():
     
 
 def pop_bout_res():
-    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id full join ufc.bout_results br on br.bout_id = b.bout_id where date > '1-1-2002' and br.bout_id is NULL;")
+#    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id full join ufc.bout_results br on br.bout_id = b.bout_id where date > '1-1-2002' and br.bout_id is NULL;")
+    
+    modern_fights = pg_query(PSQL.client, "select bs.bout_id from ufc.bout_results br full join ufc.bout_stats bs on bs.bout_id = br.bout_id where br.bout_id is Null")
+    
     method_dict = pg_query(PSQL.client, "select * from ufc.methods;")
     method_dict = {v:k for k,v in method_dict.values}
     all_fighters = pg_query(PSQL.client, "select fighter_id from ufc.fighters;")

@@ -1,4 +1,6 @@
 import os, sys
+import platform
+
 try:                                            # if running in CLI
     cur_path = os.path.abspath(__file__)
 except NameError:                               # if running in IDE
@@ -6,7 +8,7 @@ except NameError:                               # if running in IDE
 while cur_path.split('/')[-1] != 'ufc':
     cur_path = os.path.abspath(os.path.join(cur_path, os.pardir))
 sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
-#sys.path.insert(2, os.path.join(cur_path, 'lib','LightGBM', 'python-package'))
+sys.path.insert(2, os.path.join(cur_path, 'lib','LightGBM', 'python-package'))
 #sys.path.insert(3, cur_path)
 #sys.path.insert(4, os.path.join(cur_path, 'modelling'))
 
@@ -22,7 +24,7 @@ import importlib
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.utils import class_weight
 from sklearn.externals import joblib
-from sklearn.metrics import log_loss, mean_squared_error
+from sklearn.metrics import log_loss, mean_squared_error, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 import random
 from copy import deepcopy
 from joblib import dump, load
@@ -43,9 +45,29 @@ def ensure_dir(file_path):
     if not os.path.exists(file_path):
         os.makedirs(file_path)
 
+
     
-def cross_validate(x,y,est,scaler, only_scores = False, njobs = -1, verbose = False): 
-#    x,y,est,scaler, only_scores, njobs, verbose = X,Y,model,scale, True, -1, True
+def _single_core_solver(input_vals):
+#   trainx, testx, trainy, testy, model = job
+    trainx, testx, trainy, testy, model = input_vals
+    if len(trainy.unique()) == 2:
+        obj = 'class'
+    else:
+        obj = 'reg'
+        
+    model.fit(trainx, trainy)   
+    
+    if obj == 'class':    
+        pred = model.predict_proba(testx)
+        pred = [i[1] for i in pred]
+    else:
+        pred = model.predict(testx)
+    #pred_bin = [0 if i[0] > .5 else 1 for i in pred]
+    return(pd.DataFrame(pred, testy.index))
+    
+    
+def cross_validate(x,y,est,scaler, only_scores = True, njobs = -1, verbose = False): 
+#    x,y,est,scaler, only_scores, njobs, verbose = x,Y,model,scale, False, -1, True
     if len(y.unique()) == 2:
         splitter = StratifiedKFold(n_splits = 8, random_state = 53)
     else:
@@ -53,7 +75,10 @@ def cross_validate(x,y,est,scaler, only_scores = False, njobs = -1, verbose = Fa
         
     if est.__class__ == lightgbm.sklearn.LGBMClassifier:
         njobs = 1
-
+        
+    if platform.system() == 'Darwin':
+        njobs = 1
+        
     all_folds = []
     for fold in splitter.split(x, y):
         all_folds.append(fold)
@@ -66,16 +91,27 @@ def cross_validate(x,y,est,scaler, only_scores = False, njobs = -1, verbose = Fa
         cv_results = []
         for job in jobs:
             if only_scores:
-                cv_results.append(_single_core_scorer(job))
+                cv_results.append(_single_core_eval(job)) 
             else:
                 cv_results.append(_single_core_solver(job))
     else:
-        if verbose:
-            cv_results = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_single_core_scorer) (i) for i in jobs)
+        if only_scores:
+            if verbose:
+                cv_results = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_single_core_eval) (i) for i in jobs)
+            else:
+                cv_results = joblib.Parallel(n_jobs = njobs)(joblib.delayed(_single_core_eval) (i) for i in jobs)
         else:
-            cv_results = joblib.Parallel(n_jobs = njobs)(joblib.delayed(_single_core_scorer) (i) for i in jobs)
-    
-    results = np.mean(cv_results)
+            if verbose:
+                cv_results = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_single_core_solver) (i) for i in jobs)
+            else:
+                cv_results = joblib.Parallel(n_jobs = njobs)(joblib.delayed(_single_core_solver) (i) for i in jobs)
+            
+    if only_scores:
+        results = np.mean(cv_results)
+    else:
+        results = pd.DataFrame()
+        for df in cv_results:
+            results = results.append(df)
     return(results)
         
         
@@ -115,7 +151,44 @@ def _save_scores(dimen, mod, res, stg, final = False):
         with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
             json.dump({stg: res}, fp)
             
-  
+
+def _save_meta_scores(dimen, _preddim, mod, res, stg, final = False):
+#    dimen, mod, res, stg, final = dim, name, checkpoint, stage, final
+    """
+    Save model results to text files
+    
+    Parameters
+    ----------
+    dimen: str
+        Target to predict (i.e. loan step 1)
+    mod: str
+        Model name (i.e. LogRegression)
+    res: float
+        Model score
+    stg: int
+        Stage of model tuning
+    final: Boolean
+        Flag to save results to final result folder instead of tuning folder
+    
+    """ 
+
+    if final:
+        result_folder = os.path.join(cur_path, 'modelling', dimen, 'meta', _preddim, 'final', 'results')
+    else:
+        result_folder = os.path.join(cur_path, 'modelling', dimen, 'meta', _preddim, 'tuning', 'results')
+    ensure_dir(result_folder)
+    
+    if os.path.isfile(os.path.join(result_folder, '%s.json' % (mod))):
+        with open(os.path.join(result_folder, '%s.json' % (mod)), 'r') as fp:
+            scores = json.load(fp)
+        scores[stg] = res
+        with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
+            json.dump(scores, fp)
+    else:
+        with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
+            json.dump({stg: res}, fp)
+            
+            
 def _save_feats(dimen, mod, feats, stg, final = False):
 #    dimen, mod, feats, stg, final = dim, name, features, stage, final
 
@@ -135,6 +208,70 @@ def _save_feats(dimen, mod, feats, stg, final = False):
         with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
             json.dump({stg: feats}, fp)
             
+
+def _save_meta_feats(dimen, _preddim, mod, feats, stg, final = False):
+#    dimen, mod, feats, stg, final = dim, name, features, stage, final
+
+    if final:
+        result_folder = os.path.join(cur_path, 'modelling', dimen, 'meta', _preddim, 'final', 'features')
+    else:
+        result_folder = os.path.join(cur_path, 'modelling', dimen, 'meta', _preddim, 'tuning', 'features')
+    ensure_dir(result_folder)
+    
+    if os.path.isfile(os.path.join(result_folder, '%s.json' % (mod))):
+        with open(os.path.join(result_folder, '%s.json' % (mod)), 'r') as fp:
+            scores = json.load(fp)
+        scores[stg] = feats
+        with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
+            json.dump(scores, fp)
+    else:
+        with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
+            json.dump({stg: feats}, fp)
+            
+            
+def _save_meta_model(preddim, stage, dim, name, model, scale, checkpoint, features, final = False):
+#    stage, dim, name, model, scale, checkpoint, features, final = stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, False
+    """
+    Save model to disk after stage tuning
+    
+    Parameters
+    ----------
+    stage: int
+        Stage of model tuning
+    dim: str
+        Target to predict (i.e. loan step 1)
+    name: str
+        Model name (i.e. LogRegression)
+    model: sklearn classifier
+        Classifier to save
+    checkpoint: float
+        Model score
+    final: Boolean
+        Flag to save results to final result folder instead of tuning folder
+    
+    """ 
+    
+    
+    print('Storing Stage %s %s %s %s Model' % (stage, dim, preddim, name))
+    if final:
+        model_folder = os.path.join(cur_path, 'modelling', dim, 'meta', preddim, 'final', 'models', name)
+    else:
+        model_folder = os.path.join(cur_path, 'modelling', dim, 'meta', preddim, 'tuning', 'models', name)
+        
+    ensure_dir(model_folder)
+    dump(model, os.path.join(model_folder, '%s.pkl' % (stage)))    
+
+    if final:
+        scale_folder = os.path.join(cur_path, 'modelling', dim, 'meta', preddim, 'final', 'scalers', name)
+    else:
+        scale_folder = os.path.join(cur_path, 'modelling', dim, 'meta', preddim, 'tuning', 'scalers', name)
+        
+    ensure_dir(scale_folder)
+    dump(scale, os.path.join(scale_folder, '%s.pkl' % (stage)))  
+
+    _save_meta_scores(dim, preddim, name, checkpoint, stage, final) 
+    _save_meta_feats(dim, preddim, name, features, stage, final) 
+
             
 def _save_model(stage, dim, name, model, scale, checkpoint, features, final = False):
 #    stage, dim, name, model, scale, checkpoint, features, final = stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, False
@@ -179,38 +316,8 @@ def _save_model(stage, dim, name, model, scale, checkpoint, features, final = Fa
     _save_scores(dim, name, checkpoint, stage, final) 
     _save_feats(dim, name, features, stage, final) 
 
-#def _single_core_solver(input_vals):
-##   trainx, testx, trainy, testy, model, metric = job
-#    trainx, testx, trainy, testy, model, metric = input_vals
-#
-#    test_weights = class_weight.compute_class_weight('balanced',
-#                                np.unique(trainy),trainy)    
-#    test_weights_dict = {i:j for i,j in zip(np.unique(trainy), test_weights)}    
-#
-#    model.fit(trainx, trainy)   
-#    
-#     
-#    if metric == 'logloss':
-#        pred = model.predict_proba(testx)
-#        score = log_loss(testy, pred, sample_weight = [test_weights_dict[i] for i in testy])
-#        score *= -1
-#    elif metric == 'accuracy':
-#        pred = model.predict(testx)
-#        score = accuracy_score(testy, pred)#, sample_weight = [test_weights_dict[i] for i in testy])
-#    elif metric == 'f1':
-#        pred = model.predict(testx)
-#        score = f1_score(testy, pred)#, sample_weight = [test_weights_dict[i] for i in testy])
-#    elif metric == 'recall':
-#        pred = model.predict(testx)
-#        score = recall_score(testy, pred)#, sample_weight = [test_weights_dict[i] for i in testy])
-#    elif metric == 'prec':
-#        pred = model.predict(testx)
-#        score = precision_score(testy, pred)#, sample_weight = [test_weights_dict[i] for i in testy])
-#        
-#    return(score)
-
-
-def _single_core_scorer(input_vals):
+    
+def _single_core_eval(input_vals):
 #   trainx, testx, trainy, testy, model = job
     trainx, testx, trainy, testy, model = input_vals
     if len(trainy.unique()) == 2:
@@ -355,6 +462,30 @@ def stage_init(name, dimension):
             return(0, False, False, False, False)
         
 
+def stage_meta_init(preddim, name, dimension):
+#    name, dimension = name, dimension
+    final_folder = os.path.join(cur_path, 'modelling', dimension, 'meta', preddim, 'final', 'models', name)
+    if os.path.isdir(final_folder):
+        return(np.nan, False, False, False, False)
+    else:
+        model_folder = os.path.join(cur_path, 'modelling', dimension, 'meta', preddim, 'tuning', 'models', name)
+        scaler_folder = os.path.join(cur_path, 'modelling', dimension, 'meta', preddim, 'tuning', 'scalers', name)
+        if os.path.isdir(model_folder):
+            stored_models = os.listdir(model_folder)
+            prev_stage = max([int(i.replace('.pkl', '')) for i in stored_models])
+            mod = load(os.path.join(model_folder, '%s.pkl' % (prev_stage)))
+            scale = load(os.path.join(scaler_folder, '%s.pkl' % (prev_stage)))
+            feats_folder = os.path.join(cur_path, 'modelling', dimension, 'meta', preddim, 'tuning', 'features')
+            with open(os.path.join(feats_folder, '%s.json' % (name)), 'r') as fp:
+                feats = json.load(fp)[str(prev_stage)]
+            results_folder = os.path.join(cur_path, 'modelling', dimension, 'meta', preddim, 'tuning', 'results')
+            with open(os.path.join(results_folder, '%s.json' % (name)), 'r') as fp:
+                result = json.load(fp)[str(prev_stage)]
+            return(prev_stage + 1, mod, scale, feats, result)  
+        else:
+            return(0, False, False, False, False)
+            
+            
 def init_feat_selection(x, y, model, thresh = '2*mean'):
 #    x, y, model, thresh = X, Y, rbfsvc_clf, '2*mean'
     print('Searching for best features.')

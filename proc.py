@@ -25,8 +25,8 @@ PSQL = db_connection('psql')
 cols = ['kd','ssa','sss','tsa','tss','sub','pas','rev','headssa','headsss','bodyssa', 'bodysss','legssa','legsss','disssa','dissss','clinssa','clinsss','gndssa','gndsss','tda','tds']
 
 def pull_stats():
-    if os.path.exists(os.path.join(cur_path, 'stats.csv')):
-        stats = pd.read_csv(os.path.join(cur_path, 'stats.csv'))
+    if os.path.exists(os.path.join(cur_path, 'test_data', 'stats.csv')):
+        stats = pd.read_csv(os.path.join(cur_path, 'test_data', 'stats.csv'))
         stats.drop('Unnamed: 0', axis = 1, inplace = True)
     else:
         stats = pg_query(PSQL.client, 'SELECT bs.bout_id, date, fighter_id, kd, ssa, sss, tsa, tss, sub, pas, rev, headssa, headsss, bodyssa, bodysss, legssa, legsss, disssa, dissss, clinssa, clinsss, gndssa, gndsss, tda, tds FROM ufc.bout_stats bs join ufc.bouts b on b.bout_id = bs.bout_id join ufc.fights f on f.fight_id = b.fight_id where champ is false;')
@@ -55,13 +55,13 @@ def pull_stats():
         
         stats = pd.merge(stats, def_stats, left_on = ['fighter_id', 'bout_id', 'fight_date'], right_on = ['fighter_id', 'bout_id', 'fight_date'])
         def_stats = None
-        stats.to_csv(os.path.join(cur_path, 'stats.csv'))
+        stats.to_csv(os.path.join(cur_path, 'test_data', 'stats.csv'))
     return(stats)
 
 
 def pull_avg_data(stats):
-    if os.path.exists(os.path.join(cur_path, 'avg_data.csv')):
-        avg_data = pd.read_csv(os.path.join(cur_path, 'avg_data.csv'))
+    if os.path.exists(os.path.join(cur_path, 'test_data', 'avg_data.csv')):
+        avg_data = pd.read_csv(os.path.join(cur_path, 'test_data', 'avg_data.csv'))
         avg_data.drop('Unnamed: 0', axis = 1, inplace = True)
     else:
         stat_avgs = {}
@@ -108,12 +108,12 @@ def pull_avg_data(stats):
                 i += 1
         
         avg_data = pd.DataFrame.from_dict(avg_data).T
-        avg_data.to_csv(os.path.join(cur_path, 'avg_data.csv'))
+        avg_data.to_csv(os.path.join(cur_path, 'test_data', 'avg_data.csv'))
     return(avg_data)
     
 def pull_adj_data(avg_data, stats):
-    if os.path.exists(os.path.join(cur_path, 'adj_data.csv')):
-        adj_data = pd.read_csv(os.path.join(cur_path, 'adj_data.csv'))
+    if os.path.exists(os.path.join(cur_path, 'test_data', 'adj_data.csv')):
+        adj_data = pd.read_csv(os.path.join(cur_path, 'test_data', 'adj_data.csv'))
         adj_data.drop('Unnamed: 0', axis = 1, inplace = True)
     else:
         stat_adj = {}
@@ -152,12 +152,12 @@ def pull_adj_data(avg_data, stats):
                 i += 1
         
         adj_data = pd.DataFrame.from_dict(adj_data).T
-        adj_data.to_csv(os.path.join(cur_path, 'adj_data.csv'))
+        adj_data.to_csv(os.path.join(cur_path, 'test_data', 'adj_data.csv'))
     return(adj_data)
 
 def pull_adj_avg_data(adj_data):
-    if os.path.exists(os.path.join(cur_path, 'adj_avg_data.csv')):
-        adj_avg_data = pd.read_csv(os.path.join(cur_path, 'adj_avg_data.csv'))
+    if os.path.exists(os.path.join(cur_path, 'test_data', 'adj_avg_data.csv')):
+        adj_avg_data = pd.read_csv(os.path.join(cur_path, 'test_data', 'adj_avg_data.csv'))
         adj_avg_data.drop('Unnamed: 0', axis = 1, inplace = True)
     else:
         adj_stat_avgs = {}
@@ -204,16 +204,16 @@ def pull_adj_avg_data(adj_data):
                 i += 1
     
         adj_avg_data = pd.DataFrame.from_dict(adj_avg_data).T
-        adj_avg_data.to_csv(os.path.join(cur_path, 'adj_avg_data.csv'))    
+        adj_avg_data.to_csv(os.path.join(cur_path, 'test_data', 'adj_avg_data.csv'))    
     return(adj_avg_data)
 
 
 def pull_pred_data(avg_data, adj_avg_data):
-    if os.path.exists(os.path.join(cur_path, 'pred_data_winner.csv')) and os.path.exists(os.path.join(cur_path, 'pred_data_length.csv')):
-        pred_data_winner = pd.read_csv(os.path.join(cur_path, 'pred_data_winner.csv'))
+    if os.path.exists(os.path.join(cur_path, 'test_data', 'pred_data_winner.csv')) and os.path.exists(os.path.join(cur_path, 'pred_data_length.csv')):
+        pred_data_winner = pd.read_csv(os.path.join(cur_path, 'test_data', 'pred_data_winner.csv'))
         pred_data_winner.drop('Unnamed: 0', inplace = True, axis = 1)
 
-        pred_data_length = pd.read_csv(os.path.join(cur_path, 'pred_data_length.csv'))
+        pred_data_length = pd.read_csv(os.path.join(cur_path, 'test_data', 'pred_data_length.csv'))
         pred_data_length.drop('Unnamed: 0', inplace = True, axis = 1)
         
     else:
@@ -343,8 +343,8 @@ def pull_pred_data(avg_data, adj_avg_data):
         pred_data_length = pred_data[[i for i in list(pred_data) if i != 'winner']]
         pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'length']]
         
-        pred_data_winner.to_csv(os.path.join(cur_path, 'pred_data_winner.csv'))
-        pred_data_length.to_csv(os.path.join(cur_path, 'pred_data_length.csv'))
+        pred_data_winner.to_csv(os.path.join(cur_path, 'test_data', 'pred_data_winner.csv'))
+        pred_data_length.to_csv(os.path.join(cur_path, 'test_data', 'pred_data_length.csv'))
         
     return(pred_data_winner, pred_data_length)
 
@@ -358,71 +358,3 @@ if __name__ == '__main__':
     
     adsfasdfaf
     
-    hold_cols = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id']
-    pred_data_winner = pred_data_winner[[i for i in list(pred_data_winner) if i not in hold_cols]]
-    
-    X = pred_data_winner[[i for i in list(pred_data_winner) if i != 'won_diff']]
-    Y = pred_data_winner['won_diff'].apply(lambda x: x if x == 1 else 0)
-    Y.mean()
-    
-    
-    
-    from sklearn.feature_selection import RFECV
-    from sklearn.model_selection import StratifiedKFold
-    import matplotlib.pyplot as plt
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.ensemble import ExtraTreesClassifier
-    forest = ExtraTreesClassifier(n_estimators=250,
-                                  random_state=0)
-    log = LogisticRegression(random_state = 0)
-    from sklearn.metrics import SCORERS
-    sorted(SCORERS.keys())
-    #forest.fit(X, Y)
-    #18
-    # random_forest
-    # 37, acc, 4 cv
-    # 31, logloss, 4 cv
-    # 11, f1, 4 cv
-    
-    rfecv = RFECV(estimator=log, step=1, cv=StratifiedKFold(4, random_state =1109),
-                  scoring='f1')
-    rfecv.fit(X, Y)
-    
-    print("Optimal number of features : %d" % rfecv.n_features_)
-    
-    # Plot number of features VS. cross-validation scores
-    plt.figure()
-    plt.xlabel("Number of features selected")
-    plt.ylabel("Cross validation score (nb of correct classifications)")
-    plt.plot(range(1, len(rfecv.grid_scores_[6:]) + 1), rfecv.grid_scores_[6:])
-    plt.show()
-    
-    
-    
-    
-    
-    
-    
-    importances = forest.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in forest.estimators_],
-                 axis=0)
-    indices = np.argsort(importances)[::-1]
-    
-    # Print the feature ranking
-    print("Feature ranking:")
-    
-    for f in range(X.shape[1]):
-        print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
-    
-    # Plot the feature importances of the forest
-    plt.figure()
-    plt.title("Feature importances")
-    plt.bar(range(X.shape[1]), importances[indices],
-           color="r", yerr=std[indices], align="center")
-    plt.xticks(range(X.shape[1]), indices)
-    plt.xlim([-1, X.shape[1]])
-    plt.show()
-
-
-
-

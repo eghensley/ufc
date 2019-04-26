@@ -7,6 +7,7 @@ except NameError:                               # if running in IDE
 while cur_path.split('/')[-1] != 'ufc':
     cur_path = os.path.abspath(os.path.join(cur_path, os.pardir))    
 sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
+sys.path.insert(2, os.path.join(cur_path, 'lib','LightGBM', 'python-package'))
 
 import imp
 import pandas as pd
