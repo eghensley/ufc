@@ -72,7 +72,7 @@ def cross_validate(x,y,est,scaler, only_scores = True, njobs = -1, verbose = Fal
     else:
         splitter = KFold(n_splits = 8, random_state = 53)
         
-    if est.__class__ == lightgbm.sklearn.LGBMClassifier:
+    if est.__class__ == lightgbm.sklearn.LGBMClassifier or est.__class__ == lightgbm.sklearn.LGBMRegressor:
         njobs = 1
         
     if platform.system() == 'Darwin':
@@ -496,7 +496,7 @@ def init_feat_selection(x, y, model, thresh = '2*mean'):
 
 
 def feat_selection(x, y, scale, model, prev_score, _iter = 24, njobs = -1, verbose = False):
-#    x, y, scale, model, prev_score, _iter, njobs, verbose = X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, 24, -1, False
+#    x, y, scale, model, prev_score, _iter, njobs, verbose = X[features], Y, scale, lgb_reg, lgbr_checkpoint_score, 24, -1, False
 
     print('Searching for best features.')
 
@@ -519,8 +519,20 @@ def feat_selection(x, y, scale, model, prev_score, _iter = 24, njobs = -1, verbo
         if n_col == 0:
             continue
         rfe_jobs.append([model, n_col, scaleX, y])
-    
-    feat_options = Parallel(n_jobs = njobs, verbose = 25)(delayed(_rfe) (i) for i in rfe_jobs)
+        
+    if model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor:
+        njobs = 1
+        
+    if platform.system() == 'Darwin':
+        njobs = 1 
+        
+    if njobs == 1:
+        feat_options = []
+        for i,(job) in enumerate(rfe_jobs):
+            progress(i, _iter)
+            feat_options.append(_rfe(job)) 
+    else:
+        feat_options = Parallel(n_jobs = njobs, verbose = 25)(delayed(_rfe) (i) for i in rfe_jobs)
 
     cur_iter = 0
     sig_feats = {}
@@ -568,7 +580,19 @@ def feat_selection_2(x, y, scale, model, prev_score, _iter = 24, njobs = -1, ver
             continue
         rfe_jobs.append([model, n_col, scaleX, y])
     
-    feat_options = Parallel(n_jobs = njobs, verbose = 25)(delayed(_rfe) (i) for i in rfe_jobs)
+    if model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor:
+        njobs = 1
+        
+    if platform.system() == 'Darwin':
+        njobs = 1 
+        
+    if njobs == 1:
+        feat_options = []
+        for i,(job) in enumerate(rfe_jobs):
+            progress(i, _iter)
+            feat_options.append(_rfe(job)) 
+    else:
+        feat_options = Parallel(n_jobs = njobs, verbose = 25)(delayed(_rfe) (i) for i in rfe_jobs)
 
     cur_iter = 0
     sig_feats = {}
