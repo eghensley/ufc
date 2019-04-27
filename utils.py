@@ -12,7 +12,6 @@ sys.path.insert(2, os.path.join(cur_path, 'lib','LightGBM', 'python-package'))
 #sys.path.insert(3, cur_path)
 #sys.path.insert(4, os.path.join(cur_path, 'modelling'))
 
-import _config
 def warn(*args, **kwargs):
     pass
 import warnings
@@ -20,14 +19,14 @@ warnings.warn = warn
 import numpy as np
 
 #import lightgbm as lgb
-import importlib
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.utils import class_weight
-from sklearn.externals import joblib
-from sklearn.metrics import log_loss, mean_squared_error, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+#from sklearn.externals import joblib
+#import joblib
+from sklearn.metrics import log_loss, mean_squared_error#, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 import random
 from copy import deepcopy
-from joblib import dump, load
+from joblib import dump, load, Parallel, delayed
 import json
 from random import sample 
 from sklearn.feature_selection import RFE
@@ -97,14 +96,14 @@ def cross_validate(x,y,est,scaler, only_scores = True, njobs = -1, verbose = Fal
     else:
         if only_scores:
             if verbose:
-                cv_results = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_single_core_eval) (i) for i in jobs)
+                cv_results = Parallel(n_jobs = njobs, verbose = 25)(delayed(_single_core_eval) (i) for i in jobs)
             else:
-                cv_results = joblib.Parallel(n_jobs = njobs)(joblib.delayed(_single_core_eval) (i) for i in jobs)
+                cv_results = Parallel(n_jobs = njobs)(delayed(_single_core_eval) (i) for i in jobs)
         else:
             if verbose:
-                cv_results = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_single_core_solver) (i) for i in jobs)
+                cv_results = Parallel(n_jobs = njobs, verbose = 25)(delayed(_single_core_solver) (i) for i in jobs)
             else:
-                cv_results = joblib.Parallel(n_jobs = njobs)(joblib.delayed(_single_core_solver) (i) for i in jobs)
+                cv_results = Parallel(n_jobs = njobs)(delayed(_single_core_solver) (i) for i in jobs)
             
     if only_scores:
         results = np.mean(cv_results)
@@ -521,7 +520,7 @@ def feat_selection(x, y, scale, model, prev_score, _iter = 24, njobs = -1, verbo
             continue
         rfe_jobs.append([model, n_col, scaleX, y])
     
-    feat_options = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_rfe) (i) for i in rfe_jobs)
+    feat_options = Parallel(n_jobs = njobs, verbose = 25)(delayed(_rfe) (i) for i in rfe_jobs)
 
     cur_iter = 0
     sig_feats = {}
@@ -569,7 +568,7 @@ def feat_selection_2(x, y, scale, model, prev_score, _iter = 24, njobs = -1, ver
             continue
         rfe_jobs.append([model, n_col, scaleX, y])
     
-    feat_options = joblib.Parallel(n_jobs = njobs, verbose = 25)(joblib.delayed(_rfe) (i) for i in rfe_jobs)
+    feat_options = Parallel(n_jobs = njobs, verbose = 25)(delayed(_rfe) (i) for i in rfe_jobs)
 
     cur_iter = 0
     sig_feats = {}
