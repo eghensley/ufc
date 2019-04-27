@@ -8,7 +8,7 @@ while cur_path.split('/')[-1] != 'ufc':
     cur_path = os.path.abspath(os.path.join(cur_path, os.pardir))    
 sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
 
-import imp
+#import imp
 import pandas as pd
 import numpy as np
 from utils import _save_meta_model, stage_meta_init, test_scaler,\
@@ -312,9 +312,9 @@ if __name__ == '__main__':
         Y = winner_res_data[meta_dimension]
         for i in range(10):
             tune_lgr()
-            tune_linsvr()
-            tune_dartr()
-            tune_lasso()
-            tune_rf()
-            tune_rbfsvr()
-            tune_polysvr()
+#            tune_linsvr()
+#            tune_dartr()
+#            tune_lasso()
+#            tune_rf()
+#            tune_rbfsvr()
+#            tune_polysvr()
