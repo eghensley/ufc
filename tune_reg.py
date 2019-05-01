@@ -8,10 +8,9 @@ while cur_path.split('/')[-1] != 'ufc':
     cur_path = os.path.abspath(os.path.join(cur_path, os.pardir))    
 sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
 
-import imp
 import pandas as pd
 import numpy as np
-from utils import _save_model, stage_init, test_solver, test_scaler,\
+from utils import _save_model, stage_init, test_scaler,\
      init_feat_selection, feat_selection, C_parameter_tuning,\
      svc_hyper_parameter_tuning, lgb_find_lr, lgb_tree_params,\
      lgb_drop_lr, alpha_parameter_tuning, forest_params, rf_trees,\
@@ -21,8 +20,7 @@ import lightgbm as lgb
 from sklearn.linear_model import Lasso
 from sklearn.ensemble import RandomForestRegressor
 
-pred_data_length = pd.read_csv(os.path.join(cur_path, 'pred_data_length.csv'))
-pred_data_length.drop('Unnamed: 0', inplace = True, axis = 1)
+pred_data_length = pd.read_csv(os.path.join(cur_path, 'data', 'length_data_validation.csv'))
 pred_data_length.set_index('bout_id', inplace = True)
 pred_data_length.drop('fighter_id', axis = 1, inplace = True)
 pred_data_length.drop('opponent_id', axis = 1, inplace = True)
@@ -46,7 +44,7 @@ def tune_linsvr():
         _save_model(stage, dimension, name, linsvr_reg, scale, linsvr_checkpoint_score, features, final = False)
         
     elif stage == 1: 
-        linsvr_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvr_reg, linsvr_checkpoint_score, 10, -1, False)
+        linsvr_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvr_reg, linsvr_checkpoint_score)
         _save_model(stage, dimension, name, linsvr_reg, scale, linsvr_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -62,7 +60,7 @@ def tune_linsvr():
         _save_model(stage, dimension, name, linsvr_reg, scale, linsvr_checkpoint_score, features, final = False)
                 
     elif stage == 5:
-        linsvr_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvr_reg, linsvr_checkpoint_score, 10, -1, False)
+        linsvr_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvr_reg, linsvr_checkpoint_score, _iter = 25)
         _save_model(stage, dimension, name, linsvr_reg, scale, linsvr_checkpoint_score, features, final = True)
        
 
@@ -80,7 +78,7 @@ def tune_rbfsvr():
         _save_model(stage, dimension, name, rbfsvr_reg, scale, rbfsvr_checkpoint_score, list(X), final = False)
         
     elif stage == 1: 
-        rbfsvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvr_reg, rbfsvr_checkpoint_score, 24, -1, False)
+        rbfsvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvr_reg, rbfsvr_checkpoint_score)
         _save_model(stage, dimension, name, rbfsvr_reg, scale, rbfsvr_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -96,11 +94,10 @@ def tune_rbfsvr():
         _save_model(stage, dimension, name, rbfsvr_reg, scale, rbfsvr_checkpoint_score, features, final = False)
 
     elif stage == 5:
-        rbfsvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvr_reg, rbfsvr_checkpoint_score, 10, -1, False)
+        rbfsvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvr_reg, rbfsvr_checkpoint_score, _iter = 25)
         _save_model(stage, dimension, name, rbfsvr_reg, scale, rbfsvr_checkpoint_score, features, final = True)
                        
       
-
 def tune_polysvr():
     name = 'PolySVR'
     dimension = 'length'
@@ -115,7 +112,7 @@ def tune_polysvr():
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, list(X), final = False)
         
     elif stage == 1: 
-        polysvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvr_reg, polysvr_checkpoint_score, 24, -1, False)
+        polysvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvr_reg, polysvr_checkpoint_score)
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -131,7 +128,7 @@ def tune_polysvr():
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
 
     elif stage == 5:
-        polysvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvr_reg, polysvr_checkpoint_score, 10, -1, False)
+        polysvr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvr_reg, polysvr_checkpoint_score, _iter = 25)
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = True)
 
 
@@ -148,7 +145,7 @@ def tune_lasso():
         _save_model(stage, dimension, name, lasso_reg, scale, lasso_checkpoint_score, list(X), final = False)
     
     elif stage == 1: 
-        lasso_checkpoint_score, features = feat_selection(X[features], Y, scale, lasso_reg, lasso_checkpoint_score, 24, -1, False)
+        lasso_checkpoint_score, features = feat_selection(X[features], Y, scale, lasso_reg, lasso_checkpoint_score)
         _save_model(stage, dimension, name, lasso_reg, scale, lasso_checkpoint_score, features, final = False)
  
     elif stage == 2:
@@ -160,13 +157,12 @@ def tune_lasso():
         _save_model(stage, dimension, name, lasso_reg, scale, lasso_checkpoint_score, features, final = False)
 
     elif stage == 4: 
-        lasso_checkpoint_score, features = feat_selection(X[features], Y, scale, lasso_reg, lasso_checkpoint_score, 24, -1, False)
+        lasso_checkpoint_score, features = feat_selection(X[features], Y, scale, lasso_reg, lasso_checkpoint_score, _iter = 25)
         _save_model(stage, dimension, name, lasso_reg, scale, lasso_checkpoint_score, features, final = False)
     
     elif stage == 5:
         scale, lasso_checkpoint_score = test_scaler(lasso_reg, X, Y) 
         _save_model(stage, dimension, name, lasso_reg, scale, lasso_checkpoint_score, features, final = True)
-
 
 
 def tune_rf():
@@ -182,7 +178,7 @@ def tune_rf():
         _save_model(stage, dimension, name, rf_reg, scale, rf_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        rf_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rf_reg, rf_checkpoint_score, 24, -1, False)
+        rf_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rf_reg, rf_checkpoint_score)
         _save_model(stage, dimension, name, rf_reg, scale, rf_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -190,7 +186,7 @@ def tune_rf():
         _save_model(stage, dimension, name, rf_reg, scale, rf_checkpoint_score, features, final = False)
           
     elif stage == 3: 
-        rf_reg, rf_checkpoint_score = forest_params(X[features], Y, rf_reg, scale, rf_checkpoint_score, iter_ = 1000)
+        rf_reg, rf_checkpoint_score = forest_params(X[features], Y, rf_reg, scale, rf_checkpoint_score)
         _save_model(stage, dimension, name, rf_reg, scale, rf_checkpoint_score, features, final = False)
 
     elif stage == 4:
@@ -198,7 +194,7 @@ def tune_rf():
         _save_model(stage, dimension, name, rf_reg, scale, rf_checkpoint_score, features, final = False)
 
     elif stage == 5: 
-        rf_checkpoint_score, features = feat_selection(X[features], Y, scale, rf_reg, rf_checkpoint_score, 24, -1, False)
+        rf_checkpoint_score, features = feat_selection(X[features], Y, scale, rf_reg, rf_checkpoint_score, _iter = 25)
         _save_model(stage, dimension, name, rf_reg, scale, rf_checkpoint_score, features, final = False)
      
     elif stage == 6:
@@ -219,7 +215,7 @@ def tune_lgr():
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        lgbr_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score, 24, -1, False)
+        lgbr_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score)
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -235,11 +231,11 @@ def tune_lgr():
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, features, final = False)
 
     elif stage == 5: 
-        lgbr_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score, 24, -1, False)
+        lgbr_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score)
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, features, final = False)
 
     elif stage == 6: 
-        lgb_reg, lgbr_checkpoint_score = lgb_tree_params(X[features], Y, lgb_reg, scale, lgbr_checkpoint_score, iter_ = 1000)
+        lgb_reg, lgbr_checkpoint_score = lgb_tree_params(X[features], Y, lgb_reg, scale, lgbr_checkpoint_score)
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, features, final = False)
 
     elif stage == 7:
@@ -247,7 +243,7 @@ def tune_lgr():
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, features, final = False)
 
     elif stage == 8: 
-        lgbr_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score, 24, -1, False)
+        lgbr_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score, _iter = 25)
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, features, final = False)
 
     elif stage == 9: 
@@ -268,7 +264,7 @@ def tune_dartr():
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        dartr_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_reg, dartr_checkpoint_score, 24, -1, False)
+        dartr_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_reg, dartr_checkpoint_score)
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -284,11 +280,11 @@ def tune_dartr():
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = False)
 
     elif stage == 5: 
-        dartr_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_reg, dartr_checkpoint_score, 24, -1, False)
+        dartr_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_reg, dartr_checkpoint_score, _iter = 25)
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = False)
 
     elif stage == 6: 
-        dart_reg, dartr_checkpoint_score = lgb_tree_params(X[features], Y, dart_reg, scale, dartr_checkpoint_score, iter_ = 1000)
+        dart_reg, dartr_checkpoint_score = lgb_tree_params(X[features], Y, dart_reg, scale, dartr_checkpoint_score)
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = False)
 
     elif stage == 7:
@@ -296,7 +292,7 @@ def tune_dartr():
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = False)
 
     elif stage == 8: 
-        dartr_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_reg, dartr_checkpoint_score, 24, -1, False)
+        dartr_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_reg, dartr_checkpoint_score)
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = False)
 
     elif stage == 9: 

@@ -47,134 +47,301 @@ def pg_insert(cur, script):
 
 PSQL = db_connection('psql')
 
-def pop_corners():
-    all_fights = pg_query(PSQL.client, 'select fight_id, name, date from ufc.fights')
-    all_fights.columns = ['fight_id', 'fight_name', 'fight_date']
-    all_fighters = pg_query(PSQL.client, "select fighter_id, name from ufc.fighters;")
-    all_fighters = {j:i for i,j in all_fighters.values}
-    all_corners = pg_query(PSQL.client, "select bout_id, red_corner, blue_corner from ufc.bout_corners")
-    all_corners = {i:{'red_corner': j, 'blue_corner': k} for i,j,k in all_corners.values}
-    all_bouts = pg_query(PSQL.client, "select bout_id, fight_id from ufc.bouts")
-    all_bouts.set_index(0, inplace = True)
-    for bout in all_corners.keys():
-        all_bouts.drop(bout, axis = 0, inplace = True)
-    missing_fights = all_bouts[1].unique()
-    total_fights = all_fights['fight_id'].values
-    all_fights.set_index('fight_id', inplace = True)
-    for fight in all_fights.index:
-        if fight not in missing_fights:
-            all_fights.drop(fight, axis = 0, inplace = True)
-    all_fights.reset_index(inplace = True)
+#def pop_corners():
+#    all_fights = pg_query(PSQL.client, 'select fight_id, name, date from ufc.fights')
+#    all_fights.columns = ['fight_id', 'fight_name', 'fight_date']
+#    all_fighters = pg_query(PSQL.client, "select fighter_id, name from ufc.fighters;")
+#    all_fighters = {j:i for i,j in all_fighters.values}
+#    all_corners = pg_query(PSQL.client, "select bout_id, red_corner, blue_corner from ufc.bout_corners")
+#    all_corners = {i:{'red_corner': j, 'blue_corner': k} for i,j,k in all_corners.values}
+#    all_bouts = pg_query(PSQL.client, "select bout_id, fight_id from ufc.bouts")
+#    all_bouts.set_index(0, inplace = True)
+#    for bout in all_corners.keys():
+#        all_bouts.drop(bout, axis = 0, inplace = True)
+#    missing_fights = all_bouts[1].unique()
+#    total_fights = all_fights['fight_id'].values
+#    all_fights.set_index('fight_id', inplace = True)
+#    for fight in all_fights.index:
+#        if fight not in missing_fights:
+#            all_fights.drop(fight, axis = 0, inplace = True)
+#    all_fights.reset_index(inplace = True)
+#    
+#    cities = pg_query(PSQL.client, 'select fight_id, city_name from ufc.fights f join ufc.cities c on f.city_id = c.city_id')
+#    cities = {i:j for i,j in cities.values}
+#    
+#    countries = pg_query(PSQL.client, 'select fight_id, country_name from ufc.fights f join ufc.countries c on f.country_id = c.country_id')
+#    countries = {i:j for i,j in countries.values}
+#    for fight_id, fight_name, fight_date in all_fights.values[2:]:
+#        if 'Fight Night' in fight_name:
+#            if fight_id == '6546af7ab545b90c':
+#                url = 'https://www.ufc.com/event/ufc-fight-night-czech-republic-2019'
+#                page = requests.get(url)
+#            elif fight_id == '84283233ec42be5f':
+#                url = 'https://www.ufc.com/event/ufc-fight-night-brazil-2019'
+#                page = requests.get(url)
+#            elif fight_id == 'de25520d54eab12d':
+#                url = 'https://www.ufc.com/event/ufc-china-2018'
+#                page = requests.get(url)
+#            elif fight_id == 'aa3153a9941b4d44':
+#                url = 'https://www.ufc.com/event/ufc-south-america-2018'
+#                page = requests.get(url)
+#            else:
+#                try:
+#                    url = 'https://www.ufc.com/event/ufc-fight-night-%s-%i-%i' % (fight_date.strftime("%B"), int(fight_date.strftime("%d")), int(fight_date.strftime("%Y")))
+#                    page = requests.get(url)
+#                    if page.status_code == 404:
+#                        asdfasdf
+#    
+#    #            if fight_id == '80eacd4da0617c57':
+#    #                url = 'https://www.ufc.com/event/ufc-fight-night-london-2019'
+#    #            if fight_id == '6546af7ab545b90c':
+#    #                url = 'https://www.ufc.com/event/ufc-fight-night-czech-republic-2019'
+#    #            if fight_id == 'a7a79b8efbceaaac':
+#    #                url = 'https://www.ufc.com/event/ufc-fight-night-phoenix-2019'
+#                except:
+#                    try:
+#                        url = 'https://www.ufc.com/event/ufc-fight-night-%s-%i' % (cities[fight_id], int(fight_date.strftime("%Y")))
+#                        page = requests.get(url)
+#                        if page.status_code == 404:
+#                            asdfasdf
+#                    except:
+#                        try:
+#                            url = 'https://www.ufc.com/event/ufc-fight-night-%s-%s-%i-%i' % (cities[fight_id], fight_date.strftime("%b"), int(fight_date.strftime("%d")), int(fight_date.strftime("%Y")))
+#                            page = requests.get(url)
+#                            if page.status_code == 404:
+#                                asdfasdf    
+#                        except:
+#                            try:
+#                                url = 'https://www.ufc.com/event/ufc-%s-%i' % (cities[fight_id], int(fight_date.strftime("%Y")))
+#                                page = requests.get(url)
+#                                if page.status_code == 404:
+#                                    asdfasdf
+#                            except:
+#                                url = 'https://www.ufc.com/event/ufc-%s-%i' % (countries[fight_id], int(fight_date.strftime("%Y")))
+#                                page = requests.get(url)
+#                                if page.status_code == 404:
+#                                    print(fight_name)
+#                                    asdfasdf
+#        else:
+#            url = 'https://www.ufc.com/event/%s' % (fight_name.split(':')[0].replace(' ', '-'))
+#            page = requests.get(url)
+#            if page.status_code == 404:
+#                print(fight_name)
+#                continue
+#                
+#        tree = html.fromstring(page.content)
+#        reds = tree.xpath('//*[@id="edit-group-main-card"]/div/div/section/ul/li/div/div/div/div[2]/div[4]/text()')
+#        reds = [i.strip() for i in reds]
+#        blues = tree.xpath('//*[@id="edit-group-main-card"]/div/div/section/ul/li/div/div/div/div[2]/div[6]/text()')
+#        blues = [i.strip() for i in blues]
+#        
+#        for red, blue in zip(reds, blues):
+#            if red not in all_fighters.keys():
+#                print(red)
+#                continue
+#            if blue not in all_fighters.keys():
+#                print(blue)
+#                continue
+#            red_corner = all_fighters[red]
+#            blue_corner = all_fighters[blue]
+#            
+#            bout_id = pg_query(PSQL.client, "select bx.bout_id from ufc.bout_fighter_xref bx join ufc.bouts b on b.bout_id = bx.bout_id where fight_id = '%s' and fighter_id = '%s' and opponent_id = '%s'" % (fight_id, red_corner, blue_corner))
+#            try:
+#                bout_id = bout_id[0].values[0]
+#            except:
+#                continue
+#            
+#            if bout_id in all_corners.keys():
+#                continue
+#            script = "INSERT INTO ufc.bout_corners(\
+#                        bout_id, red_corner, blue_corner)\
+#                        VALUES ('%s', '%s', '%s');" % (bout_id, red_corner, blue_corner)
+#            pg_insert(PSQL.client, script) 
+#            all_corners[bout_id] = {'red_corner': red_corner, 'blue_corner': blue_corner}
+        
+        
+def divide_chunks(l, n): 
+      
+    # looping till length l 
+    for i in range(0, len(l), n):  
+        yield l[i:i + n] 
+        
+        
+def pop_bout_fighter_xref():
+#    bouts = pg_query(PSQL.client, "select bout_id from ufc.bouts where fight_id = 'c912f676692c353a'")
+#    bouts = pg_query(PSQL.client, "select bout_id from ufc.bouts")
+#    for bout in bouts.values:
+#        url = 'http://www.ufcstats.com/fight-details/%s' % (bout[0])    
+#        page = requests.get(url)
+#        tree = html.fromstring(page.content)  
+#
+#        fighter_profs = tree.xpath('/html/body/section/div/div/div[1]/div/div/h3/a/@href')
+#        fighter_profs = [i.replace('http://www.ufcstats.com/fighter-details/', '') for i in fighter_profs]
+#
+#        script = "INSERT INTO ufc.bout_fighter_xref(\
+#                    bout_id, fighter_id, opponent_id)\
+#                    	VALUES ('%s', '%s', '%s');" % (bout[0], fighter_profs[0], fighter_profs[1])
+#        try:
+#            pg_insert(PSQL.client, script)
+#        except:
+#            pass
+#        script = "INSERT INTO ufc.bout_fighter_xref(\
+#                    bout_id, fighter_id, opponent_id)\
+#                    	VALUES ('%s', '%s', '%s');" % (bout[0], fighter_profs[1], fighter_profs[0])
+#        try:
+#            pg_insert(PSQL.client, script)   
+#        except:
+#            pass
     
-    cities = pg_query(PSQL.client, 'select fight_id, city_name from ufc.fights f join ufc.cities c on f.city_id = c.city_id')
-    cities = {i:j for i,j in cities.values}
-    
-    countries = pg_query(PSQL.client, 'select fight_id, country_name from ufc.fights f join ufc.countries c on f.country_id = c.country_id')
-    countries = {i:j for i,j in countries.values}
-    for fight_id, fight_name, fight_date in all_fights.values[2:]:
-        if 'Fight Night' in fight_name:
-            if fight_id == '6546af7ab545b90c':
-                url = 'https://www.ufc.com/event/ufc-fight-night-czech-republic-2019'
-                page = requests.get(url)
-            elif fight_id == '84283233ec42be5f':
-                url = 'https://www.ufc.com/event/ufc-fight-night-brazil-2019'
-                page = requests.get(url)
-            elif fight_id == 'de25520d54eab12d':
-                url = 'https://www.ufc.com/event/ufc-china-2018'
-                page = requests.get(url)
-            elif fight_id == 'aa3153a9941b4d44':
-                url = 'https://www.ufc.com/event/ufc-south-america-2018'
-                page = requests.get(url)
-            else:
-                try:
-                    url = 'https://www.ufc.com/event/ufc-fight-night-%s-%i-%i' % (fight_date.strftime("%B"), int(fight_date.strftime("%d")), int(fight_date.strftime("%Y")))
-                    page = requests.get(url)
-                    if page.status_code == 404:
-                        asdfasdf
-    
-    #            if fight_id == '80eacd4da0617c57':
-    #                url = 'https://www.ufc.com/event/ufc-fight-night-london-2019'
-    #            if fight_id == '6546af7ab545b90c':
-    #                url = 'https://www.ufc.com/event/ufc-fight-night-czech-republic-2019'
-    #            if fight_id == 'a7a79b8efbceaaac':
-    #                url = 'https://www.ufc.com/event/ufc-fight-night-phoenix-2019'
-                except:
-                    try:
-                        url = 'https://www.ufc.com/event/ufc-fight-night-%s-%i' % (cities[fight_id], int(fight_date.strftime("%Y")))
-                        page = requests.get(url)
-                        if page.status_code == 404:
-                            asdfasdf
-                    except:
-                        try:
-                            url = 'https://www.ufc.com/event/ufc-fight-night-%s-%s-%i-%i' % (cities[fight_id], fight_date.strftime("%b"), int(fight_date.strftime("%d")), int(fight_date.strftime("%Y")))
-                            page = requests.get(url)
-                            if page.status_code == 404:
-                                asdfasdf    
-                        except:
-                            try:
-                                url = 'https://www.ufc.com/event/ufc-%s-%i' % (cities[fight_id], int(fight_date.strftime("%Y")))
-                                page = requests.get(url)
-                                if page.status_code == 404:
-                                    asdfasdf
-                            except:
-                                url = 'https://www.ufc.com/event/ufc-%s-%i' % (countries[fight_id], int(fight_date.strftime("%Y")))
-                                page = requests.get(url)
-                                if page.status_code == 404:
-                                    print(fight_name)
-                                    asdfasdf
-        else:
-            url = 'https://www.ufc.com/event/%s' % (fight_name.split(':')[0].replace(' ', '-'))
-            page = requests.get(url)
-            if page.status_code == 404:
-                print(fight_name)
-                continue
-                
+    cur_bouts = pg_query(PSQL.client, "select distinct(bout_id) from ufc.bout_fighter_xref")
+    cur_bouts = set(cur_bouts[0].values)
+    fights = pg_query(PSQL.client, "select distinct(fight_id) from ufc.bouts b full join ufc.bout_fighter_xref bx on bx.bout_id = b.bout_id where bx.bout_id is NULL ")
+    for fight_id in fights.values:
+        url = 'http://www.ufcstats.com/event-details/%s' % (fight_id[0])
+        page = requests.get(url)
         tree = html.fromstring(page.content)
-        reds = tree.xpath('//*[@id="edit-group-main-card"]/div/div/section/ul/li/div/div/div/div[2]/div[4]/text()')
-        reds = [i.strip() for i in reds]
-        blues = tree.xpath('//*[@id="edit-group-main-card"]/div/div/section/ul/li/div/div/div/div[2]/div[6]/text()')
-        blues = [i.strip() for i in blues]
+    
+        fighter_profs = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[2]/p/a/@href')
+        fighter_profs = [i.replace('http://www.ufcstats.com/fighter-details/', '') for i in fighter_profs]
         
-        for red, blue in zip(reds, blues):
-            if red not in all_fighters.keys():
-                print(red)
-                continue
-            if blue not in all_fighters.keys():
-                print(blue)
-                continue
-            red_corner = all_fighters[red]
-            blue_corner = all_fighters[blue]
+        bout_ids = tree.xpath('/html/body/section/div/div/table/tbody/tr/@data-link')
+        bout_ids = [i.replace('http://www.ufcstats.com/fight-details/','') for i in bout_ids]
+        
+        if len(fighter_profs) != 2*len(bout_ids):
+            raise ValueError()
             
-            bout_id = pg_query(PSQL.client, "select bx.bout_id from ufc.bout_fighter_xref bx join ufc.bouts b on b.bout_id = bx.bout_id where fight_id = '%s' and fighter_id = '%s' and opponent_id = '%s'" % (fight_id, red_corner, blue_corner))
+        fighter_profs = list(divide_chunks(fighter_profs, 2))
+        
+        for fighters, bout in zip(fighter_profs, bout_ids):
+            if bout in cur_bouts:
+                continue
+            
+            script = "INSERT INTO ufc.bout_fighter_xref(\
+                        bout_id, fighter_id, opponent_id)\
+                        	VALUES ('%s', '%s', '%s');" % (bout, fighters[0], fighters[1])
             try:
-                bout_id = bout_id[0].values[0]
+                pg_insert(PSQL.client, script)
             except:
-                continue
+                pass
+            script = "INSERT INTO ufc.bout_fighter_xref(\
+                        bout_id, fighter_id, opponent_id)\
+                        	VALUES ('%s', '%s', '%s');" % (bout, fighters[1], fighters[0])
+            try:
+                pg_insert(PSQL.client, script)   
+            except:
+                pass
             
-            if bout_id in all_corners.keys():
-                continue
-            script = "INSERT INTO ufc.bout_corners(\
-                        bout_id, red_corner, blue_corner)\
-                        VALUES ('%s', '%s', '%s');" % (bout_id, red_corner, blue_corner)
-            pg_insert(PSQL.client, script) 
-            all_corners[bout_id] = {'red_corner': red_corner, 'blue_corner': blue_corner}
+            cur_bouts.add(bout)
+            
         
         
         
-#def pop_bout_fighter_xref():
-#    bout_data = pg_query(PSQL.client, 'select bout_id, winner, loser from ufc.bout_results;')
-#    bout_data.rename(columns = {0: 'bout_id', 1: 'winner', 2: 'loser'}, inplace = True)
-#    for bout, winner, loser in bout_data.values:
-#        script = "INSERT INTO ufc.bout_fighter_xref(\
-#                    bout_id, fighter_id, opponent_id)\
-#                    	VALUES ('%s', '%s', '%s');" % (bout, winner, loser)
-#        pg_insert(PSQL.client, script) 
-#        script = "INSERT INTO ufc.bout_fighter_xref(\
-#                    bout_id, fighter_id, opponent_id)\
-#                    	VALUES ('%s', '%s', '%s');" % (bout, loser, winner)
-#        pg_insert(PSQL.client, script) 
+def fighter_wiki_decode(input_val):
+#    input_val = val
+    try:
+        output_val = datetime.strptime(input_val, '%B %d, %Y')
+        output_key = 'born'
+        return(output_key, output_val)
+    except:
+        if 'ft' in input_val and 'in' in input_val and 'm' in input_val:
+            heights = {'feet': False, 'inches': False}
+            height_splits = input_val.split(' ')
+            for ht in height_splits:
+                if 'ft' in ht:
+                    heights['feet'] = int(ht.encode('ascii', 'ignore').decode().replace('ft', '').replace('(','').replace(')', ''))
+                elif 'in' in ht:
+                    heights['inches'] = int(ht.encode('ascii', 'ignore').decode().replace('in', '').replace('(','').replace(')', ''))
+            output_val = (heights['feet'] * 12) + heights['inches']
+            output_key = 'height'
+            return(output_key, output_val)
+        elif 'in' in input_val and 'cm' in input_val:
+            reach_splits = input_val.split(' ')  
+            for rch in reach_splits:
+                if 'in' in rch:
+                    try:
+                        output_val = int(float(rch.encode('ascii', 'ignore').decode().replace('in', '')))
+                        output_key = 'reach'
+                        return(output_key, output_val)
+                    except:
+                        pass
+                elif 'cm' in rch:
+#                    rch = reach_splits[1]
+                    cm = int(float(rch.encode('ascii', 'ignore').decode().replace('cm', '').replace('(','').replace(')', '')))
+                    output_val = round(0.393701 * cm)
+                    output_key = 'reach'
+                    return(output_key, output_val)    
+    return(False, False)
+    
 
+def add_fighter_bio(fighter, _all_fighters):            
+#    fighter, _all_fighters = fighter[1], all_fighters
+    f_url = 'http://www.ufcstats.com/fighter-details/%s' % (fighter)
+    f_page = requests.get(f_url)
+    f_tree = html.fromstring(f_page.content)
+    if f_page.status_code == 404:
+        print('404')
+    f_name = f_tree.xpath('/html/body/section/div/h2/span[1]/text()')
+    f_name = f_name[0].strip()
+    fighter_data = {'height': False,
+                    'reach': False,
+                    'born': False
+                    }
+    try:
+        f_height = f_tree.xpath('/html/body/section/div/div/div[1]/ul/li[1]/text()')
+        f_height_inches = int(f_height[1].strip().split("'")[1].strip().replace('"', ''))
+        f_height_feet = int(f_height[1].strip().split("'")[0].strip())
+        f_height = f_height_feet * 12 + f_height_inches
+        fighter_data['height'] = f_height
+    except :
+        pass
+    try:
+        f_reach = f_tree.xpath('/html/body/section/div/div/div[1]/ul/li[3]/text()')
+        f_reach = int(f_reach[1].strip().replace('"',''))
+        fighter_data['reach'] = f_reach
+    except ValueError:
+        pass
+    try:
+        f_dob = f_tree.xpath('/html/body/section/div/div/div[1]/ul/li[5]/text()')
+        f_dob = datetime.strptime(f_dob[1].strip(), '%b %d, %Y')
+        fighter_data['born'] = f_dob
+    except:
+        pass
+    
+    if (not fighter_data['height'] or not fighter_data['reach'] or not fighter_data['born']):
+        lookup_url = 'https://en.wikipedia.org/wiki/%s' % (f_name.replace(' ', '_'))
+        lookup_page = requests.get(lookup_url)
+        lookup_tree = html.fromstring(lookup_page.content)
+        
+        values = lookup_tree.xpath('//*[@id="mw-content-text"]/div/table[1]/tbody/tr/td/text()')
+        values = [i.strip() for i in values if i.strip() not in [',','']]
+        
+#        if values == ['Please', 'to check for alternative titles or spellings.'] or len(values) < 5:
+#            return(_all_fighters, False)
+            
+        kv_data = {}
+        for val in values:
+            k,v = fighter_wiki_decode(val)
+            if isinstance(k, str):
+                kv_data[k] = v                
+    
+        try:
+            for key in ['height', 'reach', 'born']:
+                if not fighter_data[key]:
+                    fighter_data[key] = kv_data[key]
+        except KeyError:
+            return(_all_fighters, False)
+                                
+    f_stance = f_tree.xpath('/html/body/section/div/div/div[1]/ul/li[4]/text()')
+    f_stance = f_stance[1].strip()
+    script = "INSERT INTO ufc.fighters(\
+                fighter_id, name, height, reach, stance, dob)\
+                VALUES ('%s', '%s', %i, %i, '%s', '%s');" % (fighter, f_name.replace("'",''), fighter_data['height'], fighter_data['reach'], f_stance, fighter_data['born'])
+    pg_insert(PSQL.client, script)
+    _all_fighters.add(fighter)
+    return(_all_fighters, True)
+        
 
+    
 def pop_bout_stats():
     all_bouts = pg_query(PSQL.client, 'select b.bout_id from ufc.bouts b full join ufc.bout_stats bs on bs.bout_id = b.bout_id where bs.bout_id is NULL')
     all_fighters = pg_query(PSQL.client, "select fighter_id from ufc.fighters;")
@@ -182,6 +349,8 @@ def pop_bout_stats():
     for bout in all_bouts.values:
         url = 'http://www.ufcstats.com/fight-details/%s' % (bout[0])
         page = requests.get(url)
+        if page.status_code != 200:
+            raise ValueError()
         tree = html.fromstring(page.content)   
         
         kd = tree.xpath('/html/body/section/div/div/section[2]/table/tbody/tr/td[2]/p/text()')
@@ -246,17 +415,23 @@ def pop_bout_stats():
         
         for _kd, _fighter_profs, _ssa, _sss, _tsa, _tss, _sub, _pas, _rev, _headssa, _headsss, _bodyssa, _bodysss, _legssa, _legsss, _distssa, _distsss, _clinssa, _clinsss, _gndssa, _gndsss, _tda, _tds in zip(kd, fighter_profs, ssa, sss, tsa, tss, sub, pas, rev, headssa, headsss, bodyssa, bodysss, legssa,legsss, distssa, distsss, clinssa, clinsss, gndssa, gndsss, tda, tds):
             if _fighter_profs not in all_fighters:
-                continue
+                added = False
+                all_fighters, added = add_fighter_bio(_fighter_profs, all_fighters)
+                if not added:
+                    print('Skipped')
+                    continue
+                
             script = "INSERT INTO ufc.bout_stats(\
                     bout_id, fighter_id, kd, ssa, sss, tsa, tss, sub, pas, rev, headssa, headsss, bodyssa, bodysss, legssa, legsss, disssa, dissss, clinssa, clinsss, gndssa, gndsss, tda, tds) \
                     	VALUES ('%s', '%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);" % (bout[0], _fighter_profs, _kd, _ssa, _sss, _tsa, _tss, _sub, _pas, _rev, _headssa, _headsss, _bodyssa, _bodysss, _legssa, _legsss, _distssa, _distsss, _clinssa, _clinsss, _gndssa, _gndsss, _tda, _tds)
             pg_insert(PSQL.client, script) 
-    
+            print('Added %s' % (bout[0]))
+            
 
 def pop_bout_res():
-#    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id full join ufc.bout_results br on br.bout_id = b.bout_id where date > '1-1-2002' and br.bout_id is NULL;")
+    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id full join ufc.bout_results br on br.bout_id = b.bout_id where date > '1-1-2002' and br.bout_id is NULL;")
     
-    modern_fights = pg_query(PSQL.client, "select bs.bout_id from ufc.bout_results br full join ufc.bout_stats bs on bs.bout_id = br.bout_id where br.bout_id is Null")
+#    modern_fights = pg_query(PSQL.client, "select bs.bout_id from ufc.bout_results br full join ufc.bout_stats bs on bs.bout_id = br.bout_id where br.bout_id is Null")
     
     method_dict = pg_query(PSQL.client, "select * from ufc.methods;")
     method_dict = {v:k for k,v in method_dict.values}
@@ -268,6 +443,9 @@ def pop_bout_res():
     for fight_id in modern_fights[0].unique():
         url = 'http://www.ufcstats.com/event-details/%s' % (fight_id)
         page = requests.get(url)
+        if page.status_code != 200:
+            print('Request denied')
+            continue
         tree = html.fromstring(page.content)
     
         fighter_profs = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[2]/p/a/@href')
@@ -279,7 +457,7 @@ def pop_bout_res():
         rounds = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[9]/p/text()')
         try:
             rounds = [int(i.strip()) for i in rounds]
-        except:
+        except ValueError:
             continue
         times = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[10]/p/text()')
         times = [i.strip() for i in times]
@@ -295,29 +473,42 @@ def pop_bout_res():
         fighters = [fighter_profs[i: i+2] for i in range(0, len(fighter_profs), 2)]
         
         for fighter, bout, method, rnd, time, length in zip(fighters, bouts, methods, rounds, times, lengths):        
-            if fighter[0] not in all_fighters or fighter[1] not in all_fighters:
-                continue
-            
+            if fighter[0] not in all_fighters:
+                added = False
+                all_fighters, added = add_fighter_bio(fighter[0], all_fighters)
+                if not added:
+                    print('Skipped')
+                    continue
+            if fighter[1] not in all_fighters:
+                added = False
+                all_fighters, added = add_fighter_bio(fighter[1], all_fighters)
+                if not added:
+                    print('Skipped')
+                    continue
+                
             if bout in all_bouts:
                 continue
             script = "INSERT INTO ufc.bout_results(\
                         	bout_id, winner, loser, method_id, rounds, time, length)\
                         	VALUES ('%s', '%s', '%s', %i, %i, %i, %i);" % (bout, fighter[0], fighter[1], method_dict[method], rnd, time, length)
-            pg_insert(PSQL.client, script) 
+            pg_insert(PSQL.client, script)
+            print('Added %s' % (bout))
                 
             
 def pop_bouts():
     modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f full join ufc.bouts b on b.fight_id = f.fight_id where date > '1-1-2002' and b.fight_id is NULL;")
-    #method_dict = pg_query(PSQL.client, "select * from ufc.methods;")
-    #method_dict = {v:k for k,v in method_dict.values}
+#    modern_fights = pg_query(PSQL.client, "select f.fight_id from ufc.fights f where date > '1-1-2002';")
+    modern_fights.drop_duplicates(inplace = True)
     wc_dict = pg_query(PSQL.client, "select * from ufc.weights;")
     wc_dict = {v:k for k,v in wc_dict.values}
-    
+    current_bouts = pg_query(PSQL.client, "select bout_id from ufc.bouts;")
+    current_bouts = set(current_bouts[0].values)
     champ_icon = 'http://1e49bc5171d173577ecd-1323f4090557a33db01577564f60846c.r80.cf1.rackcdn.com/belt.png'
-    
     for fight_id in modern_fights[0].values:
         url = 'http://www.ufcstats.com/event-details/%s' % (fight_id)
         page = requests.get(url)
+        if page.status_code != 200:
+            raise ValueError()
         tree = html.fromstring(page.content)
         weight_classes = tree.xpath('/html/body/section/div/div/table/tbody/tr/td[7]/p/text()')
         weight_classes = [i.strip() for i in weight_classes if i.strip() != '']
@@ -334,11 +525,14 @@ def pop_bouts():
             else:
                 champ = 'FALSE'
             
-        
+            if bout in current_bouts:
+                continue
+
             script = "INSERT INTO ufc.bouts(\
                         	bout_id, fight_id, weight_id, champ)\
                         	VALUES ('%s', '%s', %i, %s);" % (bout, fight_id, wc_dict[weight.replace("'", '')], champ)
-            pg_insert(PSQL.client, script)    
+            pg_insert(PSQL.client, script) 
+            print('Added %s' % (bout))
 
 
 def pop_wc_meth():
@@ -450,7 +644,7 @@ def pop_fighters():
         
         
 def pop_fights():
-    #   pg_create_table(PSQL.client, 'bout_corners')
+    #   pg_create_table(PSQL.client, 'adj_avg_stats')
     #http://www.ufcstats.com/event-details/
     url = 'http://www.ufcstats.com/statistics/events/completed?page=all'
     page = requests.get(url)
@@ -505,7 +699,6 @@ def pop_fights():
     for city, state, country in zip(cities, states, countries):
         if city in city_dict.keys():
             continue
-        
         if state == '':
             use_state = 'Null'
         else:
@@ -523,12 +716,12 @@ def pop_fights():
     for fight_id, name, country, state, city, date in zip(ids, names, countries, states, cities, dates):
         if fight_id in cur_fights:
             continue
-
         if state == '':
             use_state = 'Null'
         else:
             use_state = state_dict[state]    
         
+        print('Adding %s' % (name))
         script = "INSERT INTO ufc.fights(\
                 	fight_id, name, country_id, state_id, city_id, date)\
                 	VALUES ('%s', '%s', %i, %s, %s, '%s');" % (fight_id, name.replace("'",''), country_dict[country], use_state, city_dict[city], date)

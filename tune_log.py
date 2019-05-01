@@ -9,7 +9,6 @@ while cur_path.split('/')[-1] != 'ufc':
 sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
 sys.path.insert(2, os.path.join(cur_path, 'lib','LightGBM', 'python-package'))
 
-import imp
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -23,8 +22,7 @@ from sklearn.neighbors import KNeighborsClassifier
 import lightgbm as lgb
 from sklearn.ensemble import RandomForestClassifier
 
-pred_data_winner = pd.read_csv(os.path.join(cur_path, 'pred_data_winner.csv'))
-pred_data_winner.drop('Unnamed: 0', inplace = True, axis = 1)
+pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', 'winner_data_validation.csv'))
 pred_data_winner.set_index('bout_id', inplace = True)
 pred_data_winner.drop('fighter_id', axis = 1, inplace = True)
 pred_data_winner.drop('opponent_id', axis = 1, inplace = True)
@@ -47,7 +45,7 @@ def tune_log():
         _save_model(stage, 'winner', name, log_clf, scale, log_checkpoint_score, list(X), final = False)
     
     elif stage == 1: 
-        log_checkpoint_score, features = feat_selection(X[features], Y, scale, log_clf, log_checkpoint_score, 24, -1, False)
+        log_checkpoint_score, features = feat_selection(X[features], Y, scale, log_clf, log_checkpoint_score)
         _save_model(stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -55,7 +53,7 @@ def tune_log():
         _save_model(stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, final = False)
     
     elif stage == 3: 
-        log_checkpoint_score, features = feat_selection(X[features], Y, scale, log_clf, log_checkpoint_score, 10, -1, False)
+        log_checkpoint_score, features = feat_selection(X[features], Y, scale, log_clf, log_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, final = False)
 
     elif stage == 4:
@@ -63,7 +61,7 @@ def tune_log():
         _save_model(stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, final = False)
 
     elif stage == 5: 
-        log_checkpoint_score, features = feat_selection(X[features], Y, scale, log_clf, log_checkpoint_score, 24, -1, False)
+        log_checkpoint_score, features = feat_selection(X[features], Y, scale, log_clf, log_checkpoint_score)
         _save_model(stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, final = False)
     
     elif stage == 6:
@@ -85,7 +83,7 @@ def tune_linsvc():
         _save_model(stage, 'winner', name, linsvc_clf, scale, linsvc_checkpoint_score, features, final = False)
         
     elif stage == 1: 
-        linsvc_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvc_clf, linsvc_checkpoint_score, 10, -1, False)
+        linsvc_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvc_clf, linsvc_checkpoint_score)
         _save_model(stage, 'winner', name, linsvc_clf, scale, linsvc_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -101,7 +99,7 @@ def tune_linsvc():
         _save_model(stage, 'winner', name, linsvc_clf, scale, linsvc_checkpoint_score, features, final = False)
                 
     elif stage == 5:
-        linsvc_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvc_clf, linsvc_checkpoint_score, 10, -1, False)
+        linsvc_checkpoint_score, features = feat_selection(X[features], Y, scale, linsvc_clf, linsvc_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, linsvc_clf, scale, linsvc_checkpoint_score, features, final = True)
        
         
@@ -119,7 +117,7 @@ def tune_rbfsvc():
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, list(X), final = False)
         
     elif stage == 1: 
-        rbfsvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, 24, -1, False)
+        rbfsvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score)
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -135,7 +133,7 @@ def tune_rbfsvc():
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, features, final = False)
 
     elif stage == 5:
-        rbfsvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, 10, -1, False)
+        rbfsvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rbfsvc_clf, rbfsvc_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, rbfsvc_clf, scale, rbfsvc_checkpoint_score, features, final = True)
                        
 
@@ -153,7 +151,7 @@ def tune_polysvc():
         _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, list(X), final = False)
         
     elif stage == 1: 
-        polysvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvc_clf, polysvc_checkpoint_score, 24, -1, False)
+        polysvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvc_clf, polysvc_checkpoint_score)
         _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -169,7 +167,7 @@ def tune_polysvc():
         _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = False)
 
     elif stage == 5:
-        polysvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvc_clf, polysvc_checkpoint_score, 10, -1, False)
+        polysvc_checkpoint_score, features = feat_selection_2(X[features], Y, scale, polysvc_clf, polysvc_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, polysvc_clf, scale, polysvc_checkpoint_score, features, final = True)
              
         
@@ -186,7 +184,7 @@ def tune_lgb():
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        lgb_checkpoint_score, features = feat_selection_2(X[features], Y, scale, lgb_clf, lgb_checkpoint_score, 24, -1, False)
+        lgb_checkpoint_score, features = feat_selection_2(X[features], Y, scale, lgb_clf, lgb_checkpoint_score)
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -202,11 +200,11 @@ def tune_lgb():
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, features, final = False)
 
     elif stage == 5: 
-        lgb_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_clf, lgb_checkpoint_score, 24, -1, False)
+        lgb_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_clf, lgb_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, features, final = False)
 
     elif stage == 6: 
-        lgb_clf, lgb_checkpoint_score = lgb_tree_params(X[features], Y, lgb_clf, scale, lgb_checkpoint_score, iter_ = 1000)
+        lgb_clf, lgb_checkpoint_score = lgb_tree_params(X[features], Y, lgb_clf, scale, lgb_checkpoint_score)
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, features, final = False)
 
     elif stage == 7:
@@ -214,7 +212,7 @@ def tune_lgb():
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, features, final = False)
 
     elif stage == 8: 
-        lgb_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_clf, lgb_checkpoint_score, 24, -1, False)
+        lgb_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_clf, lgb_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, lgb_clf, scale, lgb_checkpoint_score, features, final = False)
 
     elif stage == 9: 
@@ -235,7 +233,7 @@ def tune_dart():
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        dart_checkpoint_score, features = feat_selection_2(X[features], Y, scale, dart_clf, dart_checkpoint_score, 24, -1, False)
+        dart_checkpoint_score, features = feat_selection_2(X[features], Y, scale, dart_clf, dart_checkpoint_score)
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -251,11 +249,11 @@ def tune_dart():
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = False)
 
     elif stage == 5: 
-        dart_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_clf, dart_checkpoint_score, 24, -1, False)
+        dart_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_clf, dart_checkpoint_score)
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = False)
 
     elif stage == 6: 
-        dart_clf, dart_checkpoint_score = lgb_tree_params(X[features], Y, dart_clf, scale, dart_checkpoint_score, iter_ = 1000)
+        dart_clf, dart_checkpoint_score = lgb_tree_params(X[features], Y, dart_clf, scale, dart_checkpoint_score)
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = False)
 
     elif stage == 7:
@@ -263,13 +261,12 @@ def tune_dart():
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = False)
 
     elif stage == 8: 
-        dart_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_clf, dart_checkpoint_score, 24, -1, False)
+        dart_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_clf, dart_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = False)
 
     elif stage == 9: 
         dart_clf, dart_checkpoint_score = lgb_drop_lr(dart_clf, X[features], Y, scale, dart_checkpoint_score)
         _save_model(stage, 'winner', name, dart_clf, scale, dart_checkpoint_score, features, final = True)
-
 
 
 def tune_rf():
@@ -285,7 +282,7 @@ def tune_rf():
         _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        rf_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rf_clf, rf_checkpoint_score, 24, -1, False)
+        rf_checkpoint_score, features = feat_selection_2(X[features], Y, scale, rf_clf, rf_checkpoint_score)
         _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -293,7 +290,7 @@ def tune_rf():
         _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
           
     elif stage == 3: 
-        rf_clf, rf_checkpoint_score = forest_params(X[features], Y, rf_clf, scale, rf_checkpoint_score, iter_ = 1000)
+        rf_clf, rf_checkpoint_score = forest_params(X[features], Y, rf_clf, scale, rf_checkpoint_score)
         _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
 
     elif stage == 4:
@@ -301,14 +298,13 @@ def tune_rf():
         _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
 
     elif stage == 5: 
-        rf_checkpoint_score, features = feat_selection(X[features], Y, scale, rf_clf, rf_checkpoint_score, 24, -1, False)
+        rf_checkpoint_score, features = feat_selection(X[features], Y, scale, rf_clf, rf_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, rf_clf, scale, rf_checkpoint_score, features, final = False)
 
     elif stage == 6:
         rf_clf, rf_checkpoint_score = rf_trees(X, Y, scale, rf_clf, rf_checkpoint_score)
         _save_model(stage, dimension, name, rf_clf, scale, rf_checkpoint_score, features, final = True)
         
-
 
 def tune_knn():
     name = 'KNN'
@@ -324,7 +320,7 @@ def tune_knn():
         _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, list(X), final = False)
         
     elif stage == 1: 
-        knn_checkpoint_score, features = feat_selection_2(X[features], Y, scale, knn_clf, knn_checkpoint_score, 24, -1, False)
+        knn_checkpoint_score, features = feat_selection_2(X[features], Y, scale, knn_clf, knn_checkpoint_score)
         _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = False)
     
     elif stage == 2:
@@ -340,11 +336,10 @@ def tune_knn():
         _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = False)
 
     elif stage == 5:
-        knn_checkpoint_score, features = feat_selection_2(X[features], Y, scale, knn_clf, knn_checkpoint_score, 10, -1, False)
+        knn_checkpoint_score, features = feat_selection_2(X[features], Y, scale, knn_clf, knn_checkpoint_score, _iter = 25)
         _save_model(stage, 'winner', name, knn_clf, scale, knn_checkpoint_score, features, final = True)
 
 
-     
 if __name__ == '__main__':
     for i in range(10):
         tune_lgb()

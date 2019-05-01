@@ -148,6 +148,44 @@ bout_corners = ['DROP TABLE IF EXISTS ufc.bout_corners;',
             ]
 
 
+bout_predictions = ['DROP TABLE IF EXISTS ufc.bout_predictions;',
+           
+           'CREATE TABLE ufc.bout_predictions \
+            (bout_id varchar COLLATE pg_catalog."default" NOT NULL, \
+            winner varchar COLLATE pg_catalog."default" NOT NULL, \
+            loser varchar COLLATE pg_catalog."default" NOT NULL, \
+            winner_score float NOT NULL, \
+            length int NOT NULL, \
+            CONSTRAINT bout_pred_winner_fkey FOREIGN KEY (winner) \
+            REFERENCES ufc.fighters (fighter_id), \
+            CONSTRAINT bout_pred_loser_fkey FOREIGN KEY (loser) \
+            REFERENCES ufc.fighters (fighter_id), \
+            CONSTRAINT bout_pred_bout_fkey FOREIGN KEY (bout_id) \
+            REFERENCES ufc.bouts (bout_id), \
+            CONSTRAINT bout_pred_uq UNIQUE (bout_id)) \
+            WITH (OIDS = FALSE) \
+            TABLESPACE pg_default;'
+            
+            'DROP INDEX IF EXISTS ufc.bout_prediction_id_idx;',
+            'CREATE INDEX bout_prediction_id_idx \
+            ON ufc.bout_predictions USING btree \
+            (bout_id COLLATE pg_catalog."default" text_pattern_ops) \
+            TABLESPACE pg_default;'
+            
+            'DROP INDEX IF EXISTS ufc.bout_prediction_winner_idx;',
+            'CREATE INDEX bout_prediction_winner_idx \
+            ON ufc.bout_predictions USING btree \
+            (winner COLLATE pg_catalog."default" text_pattern_ops) \
+            TABLESPACE pg_default;'
+
+            'DROP INDEX IF EXISTS ufc.bout_prediction_loser_idx;',
+            'CREATE INDEX bout_prediction_loser_idx \
+            ON ufc.bout_predictions USING btree \
+            (loser COLLATE pg_catalog."default" text_pattern_ops) \
+            TABLESPACE pg_default;'
+            ]
+
+
 bout_results = ['DROP TABLE IF EXISTS ufc.bout_results;',
            
            'CREATE TABLE ufc.bout_results \
@@ -324,6 +362,184 @@ cities = ['DROP TABLE IF EXISTS ufc.cities;',
             TABLESPACE pg_default;',
             ]
 
+
+avg_stats = ['DROP TABLE IF EXISTS ufc.avg_stats;',
+           
+           'CREATE TABLE ufc.avg_stats \
+            (fighter_id varchar COLLATE pg_catalog."default" NOT NULL, \
+             bout_id varchar COLLATE pg_catalog."default" NOT NULL, \
+              avg_o_kd float NOT NULL, \
+              avg_o_ssa float NOT NULL, \
+              avg_o_sss float NOT NULL, \
+              avg_o_tsa float NOT NULL, \
+              avg_o_tss float NOT NULL, \
+              avg_o_sub float NOT NULL, \
+              avg_o_pas float NOT NULL, \
+              avg_o_rev float NOT NULL, \
+              avg_o_headssa float NOT NULL, \
+              avg_o_headsss float NOT NULL, \
+              avg_o_bodyssa float NOT NULL, \
+              avg_o_bodysss float NOT NULL, \
+              avg_o_legssa float NOT NULL, \
+              avg_o_legsss float NOT NULL, \
+              avg_o_disssa float NOT NULL, \
+              avg_o_dissss float NOT NULL, \
+              avg_o_clinssa float NOT NULL, \
+              avg_o_clinsss float NOT NULL, \
+              avg_o_gndssa float NOT NULL, \
+              avg_o_gndsss float NOT NULL, \
+              avg_o_tda float NOT NULL, \
+              avg_o_tds float NOT NULL, \
+              avg_d_kd float NOT NULL, \
+              avg_d_ssa float NOT NULL, \
+              avg_d_sss float NOT NULL, \
+              avg_d_tsa float NOT NULL, \
+              avg_d_tss float NOT NULL, \
+              avg_d_sub float NOT NULL, \
+              avg_d_pas float NOT NULL, \
+              avg_d_rev float NOT NULL, \
+              avg_d_headssa float NOT NULL, \
+              avg_d_headsss float NOT NULL, \
+              avg_d_bodyssa float NOT NULL, \
+              avg_d_bodysss float NOT NULL, \
+              avg_d_legssa float NOT NULL, \
+              avg_d_legsss float NOT NULL, \
+              avg_d_disssa float NOT NULL, \
+              avg_d_dissss float NOT NULL, \
+              avg_d_clinssa float NOT NULL, \
+              avg_d_clinsss float NOT NULL, \
+              avg_d_gndssa float NOT NULL, \
+              avg_d_gndsss float NOT NULL, \
+              avg_d_tda float NOT NULL, \
+              avg_d_tds float NOT NULL, \
+            CONSTRAINT avg_stats_fighter_fkey FOREIGN KEY (fighter_id) \
+            REFERENCES ufc.fighters (fighter_id), \
+            CONSTRAINT avg_stats_bout_fkey FOREIGN KEY (bout_id) \
+            REFERENCES ufc.bouts (bout_id), \
+            CONSTRAINT avg_stats_uq UNIQUE (fighter_id, bout_id)) \
+            WITH (OIDS = FALSE) \
+            TABLESPACE pg_default;'
+            ]
+ 
+
+adj_stats = ['DROP TABLE IF EXISTS ufc.adj_stats;',
+           
+           'CREATE TABLE ufc.adj_stats \
+            (fighter_id varchar COLLATE pg_catalog."default" NOT NULL, \
+             bout_id varchar COLLATE pg_catalog."default" NOT NULL, \
+            adj_d_bodyssa float NOT NULL, \
+            adj_d_bodysss float NOT NULL, \
+            adj_d_clinssa float NOT NULL, \
+            adj_d_clinsss float NOT NULL, \
+            adj_d_disssa float NOT NULL, \
+            adj_d_dissss float NOT NULL, \
+            adj_d_gndssa float NOT NULL, \
+            adj_d_gndsss float NOT NULL, \
+            adj_d_headssa float NOT NULL, \
+            adj_d_headsss float NOT NULL, \
+            adj_d_kd float NOT NULL, \
+            adj_d_legssa float NOT NULL, \
+            adj_d_legsss float NOT NULL, \
+            adj_d_pas float NOT NULL, \
+            adj_d_rev float NOT NULL, \
+            adj_d_ssa float NOT NULL, \
+            adj_d_sss float NOT NULL, \
+            adj_d_sub float NOT NULL, \
+            adj_d_tda float NOT NULL, \
+            adj_d_tds float NOT NULL, \
+            adj_d_tsa float NOT NULL, \
+            adj_d_tss float NOT NULL, \
+            adj_o_bodyssa float NOT NULL, \
+            adj_o_bodysss float NOT NULL, \
+            adj_o_clinssa float NOT NULL, \
+            adj_o_clinsss float NOT NULL, \
+            adj_o_disssa float NOT NULL, \
+            adj_o_dissss float NOT NULL, \
+            adj_o_gndssa float NOT NULL, \
+            adj_o_gndsss float NOT NULL, \
+            adj_o_headssa float NOT NULL, \
+            adj_o_headsss float NOT NULL, \
+            adj_o_kd float NOT NULL, \
+            adj_o_legssa float NOT NULL, \
+            adj_o_legsss float NOT NULL, \
+            adj_o_pas float NOT NULL, \
+            adj_o_rev float NOT NULL, \
+            adj_o_ssa float NOT NULL, \
+            adj_o_sss float NOT NULL, \
+            adj_o_sub float NOT NULL, \
+            adj_o_tda float NOT NULL, \
+            adj_o_tds float NOT NULL, \
+            adj_o_tsa float NOT NULL, \
+            adj_o_tss float NOT NULL, \
+            CONSTRAINT adj_stats_fighter_fkey FOREIGN KEY (fighter_id) \
+            REFERENCES ufc.fighters (fighter_id), \
+            CONSTRAINT adj_stats_bout_fkey FOREIGN KEY (bout_id) \
+            REFERENCES ufc.bouts (bout_id), \
+            CONSTRAINT adj_stats_uq UNIQUE (fighter_id, bout_id)) \
+            WITH (OIDS = FALSE) \
+            TABLESPACE pg_default;'
+            ]
+ 
+  
+adj_avg_stats = ['DROP TABLE IF EXISTS ufc.adj_avg_stats;',
+           
+           'CREATE TABLE ufc.adj_avg_stats \
+            (fighter_id varchar COLLATE pg_catalog."default" NOT NULL, \
+             bout_id varchar COLLATE pg_catalog."default" NOT NULL, \
+            adj_avg_d_bodyssa float NOT NULL, \
+            adj_avg_d_bodysss float NOT NULL, \
+            adj_avg_d_clinssa float NOT NULL, \
+            adj_avg_d_clinsss float NOT NULL, \
+            adj_avg_d_disssa float NOT NULL, \
+            adj_avg_d_dissss float NOT NULL, \
+            adj_avg_d_gndssa float NOT NULL, \
+            adj_avg_d_gndsss float NOT NULL, \
+            adj_avg_d_headssa float NOT NULL, \
+            adj_avg_d_headsss float NOT NULL, \
+            adj_avg_d_kd float NOT NULL, \
+            adj_avg_d_legssa float NOT NULL, \
+            adj_avg_d_legsss float NOT NULL, \
+            adj_avg_d_pas float NOT NULL, \
+            adj_avg_d_rev float NOT NULL, \
+            adj_avg_d_ssa float NOT NULL, \
+            adj_avg_d_sss float NOT NULL, \
+            adj_avg_d_sub float NOT NULL, \
+            adj_avg_d_tda float NOT NULL, \
+            adj_avg_d_tds float NOT NULL, \
+            adj_avg_d_tsa float NOT NULL, \
+            adj_avg_d_tss float NOT NULL, \
+            adj_avg_o_bodyssa float NOT NULL, \
+            adj_avg_o_bodysss float NOT NULL, \
+            adj_avg_o_clinssa float NOT NULL, \
+            adj_avg_o_clinsss float NOT NULL, \
+            adj_avg_o_disssa float NOT NULL, \
+            adj_avg_o_dissss float NOT NULL, \
+            adj_avg_o_gndssa float NOT NULL, \
+            adj_avg_o_gndsss float NOT NULL, \
+            adj_avg_o_headssa float NOT NULL, \
+            adj_avg_o_headsss float NOT NULL, \
+            adj_avg_o_kd float NOT NULL, \
+            adj_avg_o_legssa float NOT NULL, \
+            adj_avg_o_legsss float NOT NULL, \
+            adj_avg_o_pas float NOT NULL, \
+            adj_avg_o_rev float NOT NULL, \
+            adj_avg_o_ssa float NOT NULL, \
+            adj_avg_o_sss float NOT NULL, \
+            adj_avg_o_sub float NOT NULL, \
+            adj_avg_o_tda float NOT NULL, \
+            adj_avg_o_tds float NOT NULL, \
+            adj_avg_o_tsa float NOT NULL, \
+            adj_avg_o_tss float NOT NULL, \
+            CONSTRAINT adj_avg_stats_fighter_fkey FOREIGN KEY (fighter_id) \
+            REFERENCES ufc.fighters (fighter_id), \
+            CONSTRAINT adj_avg_stats_bout_fkey FOREIGN KEY (bout_id) \
+            REFERENCES ufc.bouts (bout_id), \
+            CONSTRAINT adj_avg_stats_uq UNIQUE (fighter_id, bout_id)) \
+            WITH (OIDS = FALSE) \
+            TABLESPACE pg_default;'
+            ]
+
+
 create_tables = {}
 create_tables['fights'] = fights
 create_tables['countries'] = countries
@@ -337,3 +553,7 @@ create_tables['bout_results'] = bout_results
 create_tables['bout_stats'] = bout_stats
 create_tables['bout_fighter_xref'] = bout_fighter_xref
 create_tables['bout_corners'] = bout_corners
+create_tables['bout_predictions'] = bout_predictions
+create_tables['avg_stats'] = avg_stats
+create_tables['adj_stats'] = adj_stats
+create_tables['adj_avg_stats'] = adj_avg_stats
