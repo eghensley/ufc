@@ -39,7 +39,7 @@ def tune_log():
     stage, log_clf, scale, features, log_checkpoint_score = stage_init(name, dimension)
     
     if stage == 0:
-        log_clf = LogisticRegression(max_iter = 1000, random_state = 1108, class_weight = 'balanced')
+        log_clf = LogisticRegression(max_iter = 1000, random_state = 1108, class_weight = 'balanced', solver = 'lbfgs')
         log_checkpoint_score = -np.inf
         scale, log_checkpoint_score = test_scaler(log_clf, X, Y) 
         _save_model(stage, 'winner', name, log_clf, scale, log_checkpoint_score, list(X), final = False)

@@ -413,7 +413,7 @@ def feat_selection_2(x, y, scale, model, prev_score, _iter = 50, njobs = -1, ver
     def _rfe(inputs):
         _model, _n_col, _x, _y = inputs
         if len(_y.unique()) == 2:
-            rfe_model = LogisticRegression(random_state = 1108)
+            rfe_model = LogisticRegression(random_state = 1108, solver = 'lbfgs', max_iter = 500)
         else:
             rfe_model = Lasso(random_state = 1108)
         selector = RFE(rfe_model, _n_col, step=1)
