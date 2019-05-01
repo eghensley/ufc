@@ -258,9 +258,16 @@ def tune_dartr():
     stage, dart_reg, scale, features, dartr_checkpoint_score = stage_init(name, dimension)
     
     if stage == 0:
+#        import time
+#        start = time.time()
         dart_reg = lgb.LGBMRegressor(random_state = 1108, n_estimators = 100, subsample = .8, verbose=-1)
         dartr_checkpoint_score = -np.inf    
         scale, dartr_checkpoint_score = test_scaler(dart_reg, X, Y) 
+#        done = time.time()
+#        done - start
+        #ubuntu
+        #sinlge: 50.78195834159851
+        #multi: 64.57199811935425
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 

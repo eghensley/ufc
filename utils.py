@@ -66,10 +66,9 @@ def cross_validate(x,y,est,scaler, only_scores = True, njobs = -1, verbose = Fal
         splitter = StratifiedKFold(n_splits = 8, random_state = 53)
     else:
         splitter = KFold(n_splits = 8, random_state = 53)        
-    if est.__class__ == lightgbm.sklearn.LGBMClassifier or est.__class__ == lightgbm.sklearn.LGBMRegressor:
+    if (est.__class__ == lightgbm.sklearn.LGBMClassifier or est.__class__ == lightgbm.sklearn.LGBMRegressor) and platform.system() == 'Linux':
         njobs = 1        
-    if platform.system() == 'Darwin':
-        njobs = 1        
+      
     all_folds = []
     for fold in splitter.split(x, y):
         all_folds.append(fold)    
@@ -379,10 +378,8 @@ def feat_selection(x, y, scale, model, prev_score, _iter = 50, njobs = -1, verbo
         if n_col == 0:
             continue
         rfe_jobs.append([model, n_col, scaleX, y])        
-    if model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor:
-        njobs = 1        
-    if platform.system() == 'Darwin':
-        njobs = 1         
+    if (model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor) and platform.system() == 'Linux':
+        njobs = 1     
     if njobs == 1:
         feat_options = []
         for i,(job) in enumerate(rfe_jobs):
@@ -429,9 +426,7 @@ def feat_selection_2(x, y, scale, model, prev_score, _iter = 50, njobs = -1, ver
         if n_col == 0:
             continue
         rfe_jobs.append([model, n_col, scaleX, y])    
-    if model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor:
-        njobs = 1        
-    if platform.system() == 'Darwin':
+    if (model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor) and platform.system() == 'Linux':
         njobs = 1         
     if njobs == 1:
         feat_options = []
