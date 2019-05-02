@@ -120,7 +120,7 @@ def tune_polysvr():
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
             
     elif stage == 3:
-        polysvr_reg, polysvr_checkpoint_score = svc_hyper_parameter_tuning(X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score)
+        polysvr_reg, polysvr_checkpoint_score = svc_hyper_parameter_tuning(X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score, iter_ = 25)
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
     
     elif stage == 4:
@@ -215,7 +215,7 @@ def tune_lgr():
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        lgbr_checkpoint_score, features = feat_selection(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score)
+        lgbr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, lgb_reg, lgbr_checkpoint_score)
         _save_model(stage, dimension, name, lgb_reg, scale, lgbr_checkpoint_score, features, final = False)
 
     elif stage == 2:
@@ -271,7 +271,7 @@ def tune_dartr():
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, list(X), final = False)
 
     elif stage == 1: 
-        dartr_checkpoint_score, features = feat_selection(X[features], Y, scale, dart_reg, dartr_checkpoint_score)
+        dartr_checkpoint_score, features = feat_selection_2(X[features], Y, scale, dart_reg, dartr_checkpoint_score)
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = False)
 
     elif stage == 2:
