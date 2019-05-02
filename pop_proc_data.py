@@ -336,7 +336,7 @@ def pull_adj_avg_data():
 def pull_pred_data():
     avg_data = pull_avg_data()
     adj_avg_data = pull_adj_avg_data()
-
+    
     acc_stat_dict = {'acc_ss': ['ssa', 'sss'],
                        'acc_headss': ['headssa', 'headsss'],
                        'acc_bodyss': ['bodyssa', 'bodysss'],
@@ -422,6 +422,61 @@ def pull_pred_data():
     bout_len = pg_query(PSQL.client, "SELECT bout_id, length from ufc.bout_results")
     bout_len.columns = ['bout_id', 'length'] 
     
+    data = pd.merge(data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
+
+    stats = pull_stats()
+    stats = pd.merge(stats, bout_len, left_on = 'bout_id', right_on = 'bout_id')
+    winner = {}
+    for b,f in stats[['bout_id', 'fighter_id']].values:
+        if b in bouts.keys():
+            if bouts[b]['winner'] == f:
+                winner[winner_id] = {'bout_id': b, 'fighter_id': f, 'won': 1}
+                winner_id += 1
+            elif bouts[b]['loser'] == f:
+                winner[winner_id] = {'bout_id': b, 'fighter_id': f, 'won': 0}
+                winner_id += 1
+            else:
+                raise ValueError()
+    winner = pd.DataFrame.from_dict(winner).T
+    stats = pd.merge(stats, winner, left_on = ['bout_id', 'fighter_id'], right_on = ['bout_id', 'fighter_id'])
+       
+    streak_data = {}         
+    for fighter in stats.fighter_id.unique():    
+        add_data = stats.loc[stats['fighter_id'] == fighter][['bout_id', 'fight_date', 'length', 'won']]
+        add_data.sort_values('fight_date', inplace = True)
+        
+        f_streak = {}
+        for i in range(len(add_data)):
+            if i == 0:
+                continue
+            f_streak[add_data.iloc[i]['bout_id']] = {}
+            
+            f_streak[add_data.iloc[i]['bout_id']]['len_avg'] = add_data.iloc[:i]['length'].mean()
+            f_streak[add_data.iloc[i]['bout_id']]['win_avg'] = add_data.iloc[:i]['won'].mean()
+            last_res = add_data.iloc[i-1]['won']
+            streak_count = 0
+            for res in reversed(add_data.iloc[:i]['won'].values):
+                if res == last_res:
+                    streak_count += 1
+                else:
+                    break
+            if last_res == 0:
+                streak_count *= -1
+            f_streak[add_data.iloc[i]['bout_id']]['win_streak'] = streak_count
+        if len(f_streak.keys()) > 0:
+            streak_data[fighter] = f_streak
+
+    streak_avg_data = {}
+    i = 0
+    for k,v in streak_data.items():
+        for kk, vv in v.items():
+            vv['fighter_id'] = k
+            vv['bout_id'] = kk
+            streak_avg_data[i] = vv
+            i += 1
+
+    streak_avg_data = pd.DataFrame.from_dict(streak_avg_data).T            
+    data = pd.merge(data, streak_avg_data, left_on = ['bout_id', 'fighter_id'], right_on = ['bout_id', 'fighter_id'])
     
     pred_data = {}
     hold_cols = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id']
@@ -429,6 +484,7 @@ def pull_pred_data():
         bout_data = data.loc[data['bout_id'] == bout].sample(frac=1)
         if len(bout_data) != 2:
             continue
+        
         bout_data.reset_index(inplace = True, drop = True)
         bout_meta = bout_data[hold_cols]
         bout_data = bout_data[[i for i in list(bout_data) if i not in hold_cols]]
@@ -436,7 +492,10 @@ def pull_pred_data():
         for k,v in (bout_data.T[0] - bout_data.T[1]).to_dict().items():
             bout_preds[k+'_diff'] = v
         for k,v in ((bout_data.T[0] + bout_data.T[1])/2).to_dict().items():
-            bout_preds[k+'_avg'] = v                
+            bout_preds[k+'_avg'] = v  
+        bout_preds.pop('won_avg')         
+        bout_preds.keys()
+        bout_preds.pop('length_diff')              
         cur_cols = list(bout_data)
         for col in cur_cols:
             if '_o_' in col:
@@ -444,7 +503,7 @@ def pull_pred_data():
             elif '_d_' in col:
                 bout_preds[col+'_xdif'] = bout_data.loc[0][col] - bout_data.loc[1][col.replace('_d_', '_o_')]
             else:
-                continue    
+                continue   
         for k,v in bout_meta.T[0].to_dict().items():
             bout_preds[k] = v
         bout_preds.pop('bout_id')
@@ -455,7 +514,9 @@ def pull_pred_data():
     pred_data.rename(columns = {'index':'bout_id'}, inplace = True)
     pred_data = pd.merge(pred_data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
     pred_data.rename(columns = {'won_diff': 'winner'}, inplace = True)
-    pred_data.drop('won_avg', axis = 1, inplace = True)
+    pred_data.rename(columns = {'length_avg': 'length'}, inplace = True)
+
+#    pred_data.drop('won_avg', axis = 1, inplace = True)
     
     pred_data_length = pred_data[[i for i in list(pred_data) if i != 'winner']]
     pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'length']]

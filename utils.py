@@ -237,7 +237,7 @@ def _single_core_eval(input_vals):
     
 
 def test_scaler(clf, x, y, verbose = False, prev_score = False, prev_scaler = False, skip = False, prog = True):  
-#   clf, x, y, verbose, prev_score, prev_scaler, skip, prog = lgb_clf, X, Y, True, False, False, False, True
+#   clf, x, y, verbose, prev_score, prev_scaler, skip, prog = rf_reg, X[features], Y, True, False, False, False, True
     if prog:
         print('Searching for best scaler.')
     scores = {}
@@ -404,7 +404,7 @@ def feat_selection(x, y, scale, model, prev_score, _iter = 50, njobs = -1, verbo
         
         
 def feat_selection_2(x, y, scale, model, prev_score, _iter = 50, njobs = -1, verbose = False):
-#    x, y, scale, model, prev_score, _iter, njobs, verbose = X[features], Y, scale, rbfsvr_reg, rbfsvr_checkpoint_score, 24, -1, False
+#    x, y, scale, model, prev_score, _iter, njobs, verbose = X[features], Y, scale, lgb_reg, lgbr_checkpoint_score, 50, -1, False
     print('Searching for best features.')
     scaleX = scale.fit_transform(x)
     scaleX = pd.DataFrame(scaleX)
@@ -426,8 +426,8 @@ def feat_selection_2(x, y, scale, model, prev_score, _iter = 50, njobs = -1, ver
         if n_col == 0:
             continue
         rfe_jobs.append([model, n_col, scaleX, y])    
-    if (model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor) and platform.system() == 'Linux':
-        njobs = 1         
+#    if (model.__class__ == lightgbm.sklearn.LGBMClassifier or model.__class__ == lightgbm.sklearn.LGBMRegressor) and platform.system() == 'Linux':
+#        njobs = 1         
     if njobs == 1:
         feat_options = []
         for i,(job) in enumerate(rfe_jobs):
@@ -452,7 +452,7 @@ def feat_selection_2(x, y, scale, model, prev_score, _iter = 50, njobs = -1, ver
         
         
 def random_search(x, y, model, params, _scale, trials = 25, verbose = False):  
-#    x, y, model, params, _scale, trials, verbose = x, y, model, {'C':  np.logspace(-2, 2, 5)}, scale, iter_, False
+#    x, y, model, params, _scale, trials, verbose = x, y, model, param_dist, scale, iter_, False
     def _rand_shuffle(choices):
         """ Randomly select a hyperparameter for search """
         selection = {}
@@ -472,8 +472,8 @@ def random_search(x, y, model, params, _scale, trials = 25, verbose = False):
             iter_params = _rand_shuffle(params)
             iter_name = '_'.join("{!s}={!r}".format(k,v) for (k,v) in iter_params.items())         
         search_scores[iter_name] = {}
+        estimator = deepcopy(model)
         for key, value in iter_params.items():
-            estimator = deepcopy(model)
             estimator = estimator.set_params(**{key: value})
             search_scores[iter_name][key] = value
             if verbose:
@@ -484,7 +484,7 @@ def random_search(x, y, model, params, _scale, trials = 25, verbose = False):
         if estimator.get_params() == current_params:
             if verbose:
                 print('Parameters already in default.')
-            iter_score = -np.inf
+            iter_score = -np.inf        
         else:
             try:
                 iter_score = cross_validate(x,y,estimator,_scale,only_scores=True, verbose = verbose)
@@ -653,7 +653,7 @@ def knn_hyper_parameter_tuning(x, y, clf, scale, score, iter_ = 1000):
     
 
 def svc_hyper_parameter_tuning(x, y, clf, scale, score, iter_ = 100):
-#    x,y,clf,scale,score, iter_ = X[features], Y, rbfsvc_clf, scale, rbfsvc_checkpoint_score, 25
+#    x,y,clf,scale,score, iter_ = X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score, 25
     model = deepcopy(clf)
     print('Searching hyper parameters')
     param_dist = {'C':  np.logspace(-2, 2, 10),
@@ -696,7 +696,6 @@ def forest_params(x, y, clf, scale, score, iter_ = 1000):
     model = deepcopy(clf)
     param_dist = {'max_features': [None, 'sqrt', 'log2', .2,.3,.4,.5,.6,.7,.8,.9],
                   'max_depth': [3,5,8,10,12,15,20,25,30,None],
-                  'criterion': ['gini', 'entropy'],
                   'min_samples_split': [int(i) for i in range(2, 50)]}    
     results = random_search(x, y, model, param_dist, scale, trials = iter_)          
     print('Iteration LogLoss: %.5f' % (results['score']))
