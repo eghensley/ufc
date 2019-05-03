@@ -29,7 +29,7 @@ pred_cols = ['KNN',
              'PolySVC',
              'DartGBM',
              'LightGBM']
-winner_res_data = pd.read_csv(os.path.join(cur_path, 'test_data', 'pred_res_winner.csv'))
+winner_res_data = pd.read_csv(os.path.join(cur_path, 'data', 'meta', 'meta_winner.csv'))
 winner_res_data.set_index('Unnamed: 0', inplace = True)
 X = winner_res_data[[i for i in list(winner_res_data) if i not in pred_cols]]
 
@@ -310,10 +310,10 @@ if __name__ == '__main__':
     for meta_dimension in pred_cols:
         Y = winner_res_data[meta_dimension]
         for i in range(10):
-            tune_lgr()
+#            tune_lgr()
 #            tune_linsvr()
 #            tune_dartr()
-#            tune_lasso()
+            tune_lasso()
 #            tune_rf()
 #            tune_rbfsvr()
 #            tune_polysvr()
