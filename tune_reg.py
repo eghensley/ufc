@@ -14,7 +14,7 @@ from utils import _save_model, stage_init, test_scaler,\
      init_feat_selection, feat_selection, C_parameter_tuning,\
      svc_hyper_parameter_tuning, lgb_find_lr, lgb_tree_params,\
      lgb_drop_lr, alpha_parameter_tuning, forest_params, rf_trees,\
-     feat_selection_2
+     feat_selection_2, poly_hyper_parameter_tuning
 from sklearn.svm import SVR
 import lightgbm as lgb
 from sklearn.linear_model import Lasso
@@ -29,7 +29,7 @@ pred_data_length.drop('fight_date', axis = 1, inplace = True)
 X = pred_data_length[[i for i in list(pred_data_length) if i != 'length']]
 Y = pred_data_length['length']/300
 
-        
+list(X)
 def tune_linsvr():
     name = 'LinSVR'
     dimension = 'length'
@@ -120,7 +120,7 @@ def tune_polysvr():
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
             
     elif stage == 3:
-        polysvr_reg, polysvr_checkpoint_score = svc_hyper_parameter_tuning(X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score, iter_ = 25)
+        polysvr_reg, polysvr_checkpoint_score = poly_hyper_parameter_tuning(X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score, iter_ = 50)
         _save_model(stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
     
     elif stage == 4:
@@ -305,7 +305,6 @@ def tune_dartr():
     elif stage == 9: 
         dart_reg, dartr_checkpoint_score = lgb_drop_lr(dart_reg, X[features], Y, scale, dartr_checkpoint_score)
         _save_model(stage, dimension, name, dart_reg, scale, dartr_checkpoint_score, features, final = True)
-
 
 if __name__ == '__main__':
     for i in range(10):

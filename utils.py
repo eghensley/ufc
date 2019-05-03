@@ -657,8 +657,22 @@ def svc_hyper_parameter_tuning(x, y, clf, scale, score, iter_ = 100):
     model = deepcopy(clf)
     print('Searching hyper parameters')
     param_dist = {'C':  np.logspace(-2, 2, 10),
-                     'gamma': np.logspace(-2, 2, 10)}    
+                     'gamma': np.linspace(0, .75, 10)}    
     results = random_search(x, y, model, param_dist, scale, trials = iter_)  
+    print('Hyperparameter iteration LogLoss: %.5f' % (results['score']))
+    if results['score'] < score:
+        return(clf, score)
+    else:
+        return(clf.set_params(**results['parameters']), results['score'])
+     
+
+def poly_hyper_parameter_tuning(x, y, clf, scale, score, iter_ = 100):
+#    x,y,clf,scale,score, iter_ = X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score, 25
+    model = deepcopy(clf)
+    print('Searching hyper parameters')
+    param_dist = {'C':  np.logspace(-1, 1.5, 10),
+                     'gamma': np.linspace(0, .5, 10)}    
+    results = random_search(x, y, model, param_dist, scale, trials = iter_, verbose = True)  
     print('Hyperparameter iteration LogLoss: %.5f' % (results['score']))
     if results['score'] < score:
         return(clf, score)

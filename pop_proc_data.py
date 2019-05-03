@@ -512,12 +512,12 @@ def pull_pred_data():
     pred_data = pd.DataFrame.from_dict(pred_data).T
     pred_data.reset_index(inplace = True)
     pred_data.rename(columns = {'index':'bout_id'}, inplace = True)
-    pred_data = pd.merge(pred_data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
+#    pred_data = pd.merge(pred_data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
     pred_data.rename(columns = {'won_diff': 'winner'}, inplace = True)
     pred_data.rename(columns = {'length_avg': 'length'}, inplace = True)
 
 #    pred_data.drop('won_avg', axis = 1, inplace = True)
-    
+    [i for i in list(pred_data) if 'len' in i]
     pred_data_length = pred_data[[i for i in list(pred_data) if i != 'winner']]
     pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'length']]
     
@@ -529,7 +529,7 @@ def pull_pred_data():
 
 def save_validation_data():
     pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', 'winner_data.csv'))
-    pred_data_winner.set_index('bout_id', inplace = True)
+    pred_data_winner.set_index('bout_id', inplace = True)  
     pred_data_winner_validation = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2019, 1, 1)]
     pred_data_winner_validation.to_csv(os.path.join(cur_path, 'data', 'winner_data_validation.csv'))
     pred_data_winner_test = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
