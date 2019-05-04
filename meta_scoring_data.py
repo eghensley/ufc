@@ -74,57 +74,60 @@ def pull_val_data(domain):
     pred_data_winner.drop('fight_date', axis = 1, inplace = True)
     
     X = pred_data_winner[[i for i in list(pred_data_winner) if i != domain]]
-    Y = pred_data_winner[domain].apply(lambda x: x if x == 1 else 0)
     
     if domain == 'length':
-        Y /= 300
+        Y = pred_data_winner['length']/300
+    elif domain == 'winner':
+        Y = pred_data_winner[domain].apply(lambda x: x if x == 1 else 0)
+    
     return(X, Y)
 
 
-domain = 'winner'
-X, Y = pull_val_data(domain)
-
-pred_df = pd.DataFrame(Y)
-res_df = pd.DataFrame()
-final_model_folder = os.path.join(cur_path, 'modelling', domain, 'final', 'models')
-for mod_name in os.listdir(final_model_folder):
-    if mod_name == '.DS_Store':
-        continue
-    model_path = os.listdir(os.path.join(final_model_folder, mod_name))
-    model = load(os.path.join(final_model_folder, mod_name, model_path[0]))
-    feats_folder = os.path.join(cur_path, 'modelling', domain, 'final', 'features')
-    with open(os.path.join(feats_folder, '%s.json' % (mod_name)), 'r') as fp:
-        feats = json.load(fp)
-        feats = feats[max(feats.keys())]
-    scale_folder = os.path.join(cur_path, 'modelling', domain, 'final', 'scalers', mod_name)
-    scale_path = os.path.join(scale_folder, os.listdir(os.path.join(scale_folder))[0])
-    scale = load(scale_path)
-    mod_preds = cross_validate(X[feats],Y,model,scale)
-    mod_preds.rename(columns = {0: mod_name}, inplace = True)
-    pred_df = pred_df.join(mod_preds)
+def store_meta_res(domain):
+#    domain = 'length'
+    X, Y = pull_val_data(domain)
     
-pred_cols = [i for i in list(pred_df) if i != domain]
-
-mod_scores = {}
-for idx in pred_df.index:
-    mod_scores[idx] = {}
-    row = pred_df.loc[idx]
-    for mod in pred_cols:
-        if domain == 'winner':
-            row_score = logloss(row[domain], row[mod])
-        elif domain == 'length':
-            row_score = abs(row[domain] - row[mod])
-        mod_scores[idx][mod] = row_score 
-mod_scores = pd.DataFrame.from_dict(mod_scores).T
+    pred_df = pd.DataFrame(Y)
+#    res_df = pd.DataFrame()
+    final_model_folder = os.path.join(cur_path, 'modelling', domain, 'final', 'models')
+    for mod_name in os.listdir(final_model_folder):
+        if mod_name == '.DS_Store':
+            continue
+        model_path = os.listdir(os.path.join(final_model_folder, mod_name))
+        model = load(os.path.join(final_model_folder, mod_name, model_path[0]))
+        feats_folder = os.path.join(cur_path, 'modelling', domain, 'final', 'features')
+        with open(os.path.join(feats_folder, '%s.json' % (mod_name)), 'r') as fp:
+            feats = json.load(fp)
+            feats = feats[max(feats.keys())]
+        scale_folder = os.path.join(cur_path, 'modelling', domain, 'final', 'scalers', mod_name)
+        scale_path = os.path.join(scale_folder, os.listdir(os.path.join(scale_folder))[0])
+        scale = load(scale_path)
+        mod_preds = cross_validate(X[feats],Y,model,scale)
+        mod_preds.rename(columns = {0: mod_name}, inplace = True)
+        pred_df = pred_df.join(mod_preds)
+        
+    pred_cols = [i for i in list(pred_df) if i != domain]
     
-
-meta_data = mod_scores.join(X)
-PSQL = db_connection('psql')
-bouts = pg_query(PSQL.client, "select b.bout_id, weight_desc from ufc.bouts b join ufc.bout_results br on br.bout_id = b.bout_id join ufc.fights f on f.fight_id = b.fight_id join ufc.weights w on b.weight_id = w.weight_id")
-bouts.columns = ['bout_id', 'weight_id']
-weights = pd.get_dummies(bouts['weight_id'])
-weights['index'] = bouts['bout_id']
-weights.drop_duplicates(inplace = True)
-weights.set_index('index', inplace = True) 
-meta_data = meta_data.join(weights)
-meta_data.to_csv(os.path.join(cur_path, 'data', 'meta', 'meta_%s.csv' % (domain)))
+    mod_scores = {}
+    for idx in pred_df.index:
+        mod_scores[idx] = {}
+        row = pred_df.loc[idx]
+        for mod in pred_cols:
+            if domain == 'winner':
+                row_score = logloss(row[domain], row[mod])
+            elif domain == 'length':
+                row_score = abs(row[domain] - row[mod])
+            mod_scores[idx][mod] = row_score 
+    mod_scores = pd.DataFrame.from_dict(mod_scores).T
+        
+    
+    meta_data = mod_scores.join(X)
+    PSQL = db_connection('psql')
+    bouts = pg_query(PSQL.client, "select b.bout_id, weight_desc from ufc.bouts b join ufc.bout_results br on br.bout_id = b.bout_id join ufc.fights f on f.fight_id = b.fight_id join ufc.weights w on b.weight_id = w.weight_id")
+    bouts.columns = ['bout_id', 'weight_id']
+    weights = pd.get_dummies(bouts['weight_id'])
+    weights['index'] = bouts['bout_id']
+    weights.drop_duplicates(inplace = True)
+    weights.set_index('index', inplace = True) 
+    meta_data = meta_data.join(weights)
+    meta_data.to_csv(os.path.join(cur_path, 'data', 'meta', 'meta_%s.csv' % (domain)))
