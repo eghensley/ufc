@@ -15,7 +15,7 @@ from utils import _save_meta_model, stage_meta_init, test_scaler,\
      init_feat_selection, feat_selection, C_parameter_tuning,\
      svc_hyper_parameter_tuning, lgb_find_lr, lgb_tree_params,\
      lgb_drop_lr, alpha_parameter_tuning, forest_params, rf_trees,\
-     feat_selection_2
+     feat_selection_2, poly_hyper_parameter_tuning
 from sklearn.svm import SVR
 import lightgbm as lgb
 from sklearn.linear_model import Lasso
@@ -126,7 +126,7 @@ def tune_polysvr():
         _save_meta_model(meta_dimension, stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
             
     elif stage == 3:
-        polysvr_reg, polysvr_checkpoint_score = svc_hyper_parameter_tuning(X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score)
+        polysvr_reg, polysvr_checkpoint_score = poly_hyper_parameter_tuning(X[features], Y, polysvr_reg, scale, polysvr_checkpoint_score, iter_ = 50)
         _save_meta_model(meta_dimension, stage, dimension, name, polysvr_reg, scale, polysvr_checkpoint_score, features, final = False)
     
     elif stage == 4:
