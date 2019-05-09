@@ -9,17 +9,10 @@ while cur_path.split('/')[-1] != 'ufc':
 sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
 
 
-import requests
-from lxml import html
 from _connections import db_connection
-from pg_tables import create_tables
 import pandas as pd
-from datetime import datetime
 from pop_psql import pg_query, pg_insert
-import random
-from copy import deepcopy
-import numpy as np
-from pop_proc_data import pull_stats, cols, pull_avg_data, pull_adj_data
+from pop_proc_data import pull_stats, cols, pull_adj_data
 
 
 

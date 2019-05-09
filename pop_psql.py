@@ -728,3 +728,11 @@ def pop_fights():
         pg_insert(PSQL.client, script)
 
 
+if __name__ == '__main__':
+    pop_fights()
+    pop_fighters()
+    pop_wc_meth()
+    pop_bouts()
+    pop_bout_res()
+    pop_bout_stats()
+    pop_bout_fighter_xref()

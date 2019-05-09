@@ -8,15 +8,10 @@ while cur_path.split('/')[-1] != 'ufc':
     cur_path = os.path.abspath(os.path.join(cur_path, os.pardir))    
 sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
 
-
-import requests
-from lxml import html
 from _connections import db_connection
-from pg_tables import create_tables
 import pandas as pd
 from datetime import datetime
 from pop_psql import pg_query, pg_insert
-import random
 from copy import deepcopy
 import numpy as np
 
@@ -25,7 +20,7 @@ PSQL = db_connection('psql')
 cols = ['kd','ssa','sss','tsa','tss','sub','pas','rev','headssa','headsss','bodyssa', 'bodysss','legssa','legsss','disssa','dissss','clinssa','clinsss','gndssa','gndsss','tda','tds']
 
 def pull_stats():
-    stats = pg_query(PSQL.client, 'SELECT bs.bout_id, date, fighter_id, kd, ssa, sss, tsa, tss, sub, pas, rev, headssa, headsss, bodyssa, bodysss, legssa, legsss, disssa, dissss, clinssa, clinsss, gndssa, gndsss, tda, tds FROM ufc.bout_stats bs join ufc.bouts b on b.bout_id = bs.bout_id join ufc.fights f on f.fight_id = b.fight_id where champ is false;')
+    stats = pg_query(PSQL.client, 'SELECT bs.bout_id, date, fighter_id, kd, ssa, sss, tsa, tss, sub, pas, rev, headssa, headsss, bodyssa, bodysss, legssa, legsss, disssa, dissss, clinssa, clinsss, gndssa, gndsss, tda, tds FROM ufc.bout_stats bs join ufc.bouts b on b.bout_id = bs.bout_id join ufc.fights f on f.fight_id = b.fight_id;')# where champ is false;')
     stats.columns = ['bout_id', 'fight_date', 'fighter_id', 'kd', 'ssa', 'sss', 'tsa', 'tss', 'sub', 'pas', 'rev', 'headssa', 'headsss', 'bodyssa', 'bodysss', 'legssa', 'legsss', 'disssa', 'dissss', 'clinssa', 'clinsss', 'gndssa', 'gndsss', 'tda', 'tds']
     
     bouts = pg_query(PSQL.client, "select b.bout_id, weight_id, winner, loser from ufc.bouts b join ufc.bout_results br on br.bout_id = b.bout_id join ufc.fights f on f.fight_id = b.fight_id")
@@ -478,10 +473,10 @@ def pull_pred_data():
     streak_avg_data = pd.DataFrame.from_dict(streak_avg_data).T            
     data = pd.merge(data, streak_avg_data, left_on = ['bout_id', 'fighter_id'], right_on = ['bout_id', 'fighter_id'])
     
-    pred_data = {}
+    pred_data_1 = {}
     hold_cols = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id']
     for bout in data['bout_id'].unique():
-        bout_data = data.loc[data['bout_id'] == bout].sample(frac=1)
+        bout_data = data.loc[data['bout_id'] == bout]
         if len(bout_data) != 2:
             continue
         
@@ -507,14 +502,56 @@ def pull_pred_data():
         for k,v in bout_meta.T[0].to_dict().items():
             bout_preds[k] = v
         bout_preds.pop('bout_id')
-        pred_data[bout] = bout_preds
-        
-    pred_data = pd.DataFrame.from_dict(pred_data).T
-    pred_data.reset_index(inplace = True)
-    pred_data.rename(columns = {'index':'bout_id'}, inplace = True)
+        pred_data_1[bout] = bout_preds
+
+    pred_data_1 = pd.DataFrame.from_dict(pred_data_1).T
+    pred_data_1.reset_index(inplace = True)
+    pred_data_1.rename(columns = {'index':'bout_id'}, inplace = True)
 #    pred_data = pd.merge(pred_data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
-    pred_data.rename(columns = {'won_diff': 'winner'}, inplace = True)
-    pred_data.rename(columns = {'length_avg': 'length'}, inplace = True)
+    pred_data_1.rename(columns = {'won_diff': 'winner'}, inplace = True)
+    pred_data_1.rename(columns = {'length_avg': 'length'}, inplace = True)
+
+
+    pred_data_2 = {}
+    for bout in data['bout_id'].unique():
+        bout_data = data.loc[data['bout_id'] == bout]
+        if len(bout_data) != 2:
+            continue
+        bout_data = bout_data.iloc[[1,0]]
+        
+        bout_data.reset_index(inplace = True, drop = True)
+        bout_meta = bout_data[hold_cols]
+        bout_data = bout_data[[i for i in list(bout_data) if i not in hold_cols]]
+        bout_preds = {}
+        for k,v in (bout_data.T[0] - bout_data.T[1]).to_dict().items():
+            bout_preds[k+'_diff'] = v
+        for k,v in ((bout_data.T[0] + bout_data.T[1])/2).to_dict().items():
+            bout_preds[k+'_avg'] = v  
+        bout_preds.pop('won_avg')         
+        bout_preds.keys()
+        bout_preds.pop('length_diff')              
+        cur_cols = list(bout_data)
+        for col in cur_cols:
+            if '_o_' in col:
+                bout_preds[col+'_xdif'] = bout_data.loc[0][col] - bout_data.loc[1][col.replace('_o_', '_d_')]            
+            elif '_d_' in col:
+                bout_preds[col+'_xdif'] = bout_data.loc[0][col] - bout_data.loc[1][col.replace('_d_', '_o_')]
+            else:
+                continue   
+        for k,v in bout_meta.T[0].to_dict().items():
+            bout_preds[k] = v
+        bout_preds.pop('bout_id')
+        pred_data_2[bout] = bout_preds
+
+        
+    pred_data_2 = pd.DataFrame.from_dict(pred_data_2).T
+    pred_data_2.reset_index(inplace = True)
+    pred_data_2.rename(columns = {'index':'bout_id'}, inplace = True)
+#    pred_data = pd.merge(pred_data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
+    pred_data_2.rename(columns = {'won_diff': 'winner'}, inplace = True)
+    pred_data_2.rename(columns = {'length_avg': 'length'}, inplace = True)
+
+    pred_data = pred_data_1.append(pred_data_2)
 
 #    pred_data.drop('won_avg', axis = 1, inplace = True)
     [i for i in list(pred_data) if 'len' in i]
@@ -544,7 +581,11 @@ def save_validation_data():
 
 
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
+    pop_avg_data()
+    pop_adj_data()
+    pop_adj_avg_data()
+    
 #    stats = pull_stats()
 #    avg_data = pull_avg_data(stats)
 #    adj_data = pull_adj_data(avg_data, stats)
