@@ -130,6 +130,22 @@ bout_fighter_xref = ['DROP TABLE IF EXISTS ufc.bout_fighter_xref;',
             ]
 
 
+winner_consensus_odds = ['DROP TABLE IF EXISTS ufc.winner_consensus_odds;',
+           
+           'CREATE TABLE ufc.winner_consensus_odds \
+            (bout_id varchar COLLATE pg_catalog."default" NOT NULL, \
+            fighter_id varchar COLLATE pg_catalog."default" NOT NULL, \
+            imp_prob float, \
+            CONSTRAINT winner_consensus_odds_fighter_fkey FOREIGN KEY (fighter_id) \
+            REFERENCES ufc.fighters (fighter_id), \
+            CONSTRAINT winner_consensus_odds_bout_fkey FOREIGN KEY (bout_id) \
+            REFERENCES ufc.bouts (bout_id), \
+            CONSTRAINT winner_consensus_odds_fighter_uq UNIQUE (bout_id, fighter_id)) \
+            WITH (OIDS = FALSE) \
+            TABLESPACE pg_default;'
+            ]
+
+
 bout_corners = ['DROP TABLE IF EXISTS ufc.bout_corners;',
            
            'CREATE TABLE ufc.bout_corners \
@@ -557,3 +573,4 @@ create_tables['bout_predictions'] = bout_predictions
 create_tables['avg_stats'] = avg_stats
 create_tables['adj_stats'] = adj_stats
 create_tables['adj_avg_stats'] = adj_avg_stats
+create_tables['winner_consensus_odds'] = winner_consensus_odds

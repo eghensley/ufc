@@ -240,7 +240,7 @@ def test_scaler(clf, prev_score, x, y, verbose = False, prog = True):
         return(clf, prev_score)
 
 
-def test_solver(x, y, clf, scaler, prev_score, verbose = False): 
+def test_solver(x, y, clf, prev_score, verbose = False): 
 #    x, y, clf, scaler, prev_score, verbose = X[features], Y, log_clf, scale, log_checkpoint_score, False
     print('Searching for best solver.')
     model = deepcopy(clf)
