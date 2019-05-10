@@ -250,7 +250,7 @@ def test_solver(x, y, clf, prev_score, verbose = False):
     for solve in all_solvers:
         if not verbose:
             progress(cur_solver, len(all_solvers))    
-        model.set_params(**{'solver': solve})
+        model.set_params(**{'clf__solver': solve})
         score = cross_validate(x,y,model.set_params(**{'clf__solver': solve}),only_scores=True, verbose = verbose)
 #        score = test_scaler(model, x, y, verbose = verbose, prev_score = False, prev_scaler = False, skip = False, prog = False)
         if verbose:

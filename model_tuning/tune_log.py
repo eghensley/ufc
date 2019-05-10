@@ -28,6 +28,7 @@ pred_data_winner.set_index('bout_id', inplace = True)
 pred_data_winner.drop('fighter_id', axis = 1, inplace = True)
 pred_data_winner.drop('opponent_id', axis = 1, inplace = True)
 pred_data_winner.drop('fight_date', axis = 1, inplace = True)
+#pred_data_winner = pred_data_winner.reset_index().sort_values('bout_id').set_index('bout_id')
 
 X = pred_data_winner[[i for i in list(pred_data_winner) if i != 'winner']]
 Y = pred_data_winner['winner'].apply(lambda x: x if x == 1 else 0)
