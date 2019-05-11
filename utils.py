@@ -543,7 +543,7 @@ def lgb_drop_lr(_model, x, y, start_score, verbose = True):
     model.set_params(**{'clf__n_estimators': init_best_trees})
     while improvement >= 0:
         tree_iter += 1
-        cur_lr = param_search[tree_iter-1]['lr']/2
+        cur_lr = param_search[tree_iter-1]['clf__lr']/2
         drop_score = drop_lr(x, y, model, param_search[tree_iter-1], _verbose = verbose)
         drop_best_trees, drop_best_score = [[i,j] for i,j in drop_score.items() if j == max(drop_score.values())][0]
         print('Best Results: Trees = %i, Score = %.3f' % (drop_best_trees, drop_best_score))
