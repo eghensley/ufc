@@ -508,7 +508,7 @@ def drop_lr(_x, _y, _clf, _param_search, _verbose = False):
 #    _x, _y, _scale, _clf, _param_search, _verbose = x, y, scale, model, param_search[tree_iter-1], True
     clf = deepcopy(_clf)
     _lr = _param_search['clf__lr']/2
-    _trees = _param_search['best_trees']
+    _trees = _param_search['clf__best_trees']
     if _verbose:
         print('Learning Rate: %.5f' % (_lr))  
     _score = cross_validate(_x, _y, clf.set_params(**{'clf__learning_rate':_lr}),only_scores=True, verbose = _verbose)
