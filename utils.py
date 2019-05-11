@@ -507,7 +507,7 @@ def random_search(x, y, model, params, trials = 25, verbose = False):
 def drop_lr(_x, _y, _clf, _param_search, _verbose = False):  
 #    _x, _y, _scale, _clf, _param_search, _verbose = x, y, scale, model, param_search[tree_iter-1], True
     clf = deepcopy(_clf)
-    _lr = _param_search['lr']/2
+    _lr = _param_search['clf__lr']/2
     _trees = _param_search['best_trees']
     if _verbose:
         print('Learning Rate: %.5f' % (_lr))  
