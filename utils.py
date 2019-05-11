@@ -538,7 +538,7 @@ def lgb_drop_lr(_model, x, y, start_score, verbose = True):
     init_score = check_lr(x, y, model, model.get_params()['clf__learning_rate'], _verbose = verbose)
     init_best_trees, init_best_score = [[i,j] for i,j in init_score.items() if j == max(init_score.values())][0]
     tree_iter = 0
-    param_search = {tree_iter: {'clf__lr':model.get_params()['clf__learning_rate'], 'best_trees': init_best_trees, 'best_score': init_best_score} }
+    param_search = {tree_iter: {'clf__lr':model.get_params()['clf__learning_rate'], 'clf__best_trees': init_best_trees, 'best_score': init_best_score} }
     improvement = init_best_score - start_score
     model.set_params(**{'clf__n_estimators': init_best_trees})
     while improvement >= 0:
