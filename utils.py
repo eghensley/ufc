@@ -550,7 +550,7 @@ def lgb_drop_lr(_model, x, y, start_score, verbose = True):
         improvement = drop_best_score - param_search[tree_iter-1]['best_score']
         if improvement > 0:
             param_search[tree_iter] = {'clf__lr':cur_lr, 'clf__best_trees': drop_best_trees, 'best_score': drop_best_score}
-    return(model.set_params(**{'clf__learning_rate':param_search[max(param_search.keys())]['clf__lr'], 'n_estimators': param_search[max(param_search.keys())]['clf__best_trees']}), param_search[max(param_search.keys())]['best_score'])
+    return(model.set_params(**{'clf__learning_rate':param_search[max(param_search.keys())]['clf__lr'], 'clf__n_estimators': param_search[max(param_search.keys())]['clf__best_trees']}), param_search[max(param_search.keys())]['best_score'])
 
 
 def check_lr(_x, _y, _clf, _lr, _verbose = False):  
