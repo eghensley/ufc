@@ -372,7 +372,7 @@ def pull_adj_avg_data():
     return(data)        
 
 
-def pull_pred_data():
+def post_pred_data():
     avg_data = pull_avg_data()
     adj_avg_data = pull_adj_avg_data()
     
@@ -1433,23 +1433,24 @@ def update_adj_avg_data():
             
             
 def update_deriv():
-    update_adj_data()
-    update_adj_avg_data()
+#    update_adj_data()
+#    update_adj_avg_data()
     update_avg_data()
     
     
 def update_base_data():
-#    pop_fights()
-#    pop_fighters()
-#    pop_wc_meth()
-#    pop_bouts()
-#    pop_bout_res()
-#    pop_bout_stats()
+    pop_fights()
+    pop_fighters()
+    pop_wc_meth()
+    pop_bouts()
+    pop_bout_res()
+    pop_bout_stats()
     pop_bout_fighter_xref()
-#    pop_winner_odds()
+    pop_winner_odds()
     
 
 #hgds
 if __name__ == '__main__':
 #    update_base_data()
-    update_deriv()
+#    update_deriv()
+    post_pred_data()
