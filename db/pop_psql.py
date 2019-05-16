@@ -1458,7 +1458,7 @@ def update_base_data():
     
 
 #hgds
-#if __name__ == '__main__':
-##    update_base_data()
-##    update_deriv()
-#    post_pred_data()
+if __name__ == '__main__':
+#    update_base_data()
+#    update_deriv()
+    post_pred_data()
