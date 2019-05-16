@@ -25,7 +25,7 @@ from copy import deepcopy
 PSQL = db_connection('psql')
 cols = ['kd','ssa','sss','tsa','tss','sub','pas','rev','headssa','headsss','bodyssa', 'bodysss','legssa','legsss','disssa','dissss','clinssa','clinsss','gndssa','gndsss','tda','tds']
 
-
+print(os.path.join(cur_path, 'data', 'winner_data.csv'))
 def pg_create_table(cur, table_name):  
 #    cur, table_name = _psql, 
     try:
@@ -414,6 +414,7 @@ def post_pred_data():
         adj_avg_data['adj_avg_o_'+k+'_s'] = (adj_avg_data['adj_avg_o_'+v[1]]/adj_avg_data['adj_avg_o_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
         adj_avg_data['adj_avg_d_'+k+'_s'] = (adj_avg_data['adj_avg_d_'+v[1]]/adj_avg_data['adj_avg_d_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
     
+    print('Adding Share/Acc data')
     data = pd.merge(avg_data, adj_avg_data, left_on = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id'], right_on = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id'])
     data.dropna(inplace = True)
     fighters = pg_query(PSQL.client, 'select fighter_id, height, reach, stance, dob from ufc.fighters')
@@ -424,7 +425,8 @@ def post_pred_data():
     fighters.rename(columns = {'': 'Missing Stance'}, inplace = True)
     fighters.reset_index(inplace = True)
     fighter_dob = {i:j for i,j in fighters[['fighter_id', 'dob']].values}
-    
+
+    print('Adding fighter data')    
     i = 0
     fighter_ages = {}
     for bout, fighter, date in data[['bout_id', 'fighter_id', 'fight_date']].values:
@@ -438,7 +440,7 @@ def post_pred_data():
     data['reach'] = data['fighter_id'].apply(lambda x: fighter_reach[x])
     data['height'] = data['fighter_id'].apply(lambda x: fighter_height[x])
     
-    
+    print('Adding fight results')
     bouts = pg_query(PSQL.client, "select b.bout_id, weight_id, winner, loser from ufc.bouts b join ufc.bout_results br on br.bout_id = b.bout_id join ufc.fights f on f.fight_id = b.fight_id")
     bouts.columns = ['bout_id', 'weight_id', 'winner', 'loser']
     bouts = {i:{'winner':j, 'loser': k} for i,j,k in bouts[['bout_id', 'winner', 'loser']].values}
@@ -462,6 +464,7 @@ def post_pred_data():
     
     data = pd.merge(data, bout_len, left_on = 'bout_id', right_on = 'bout_id')
 
+    print('Adding win/loss streak data')
     stats = pull_stats()
     stats = pd.merge(stats, bout_len, left_on = 'bout_id', right_on = 'bout_id')
     winner = {}
@@ -516,9 +519,12 @@ def post_pred_data():
     streak_avg_data = pd.DataFrame.from_dict(streak_avg_data).T            
     data = pd.merge(data, streak_avg_data, left_on = ['bout_id', 'fighter_id'], right_on = ['bout_id', 'fighter_id'])
     
+    print('Processing Blue Corner data')
     pred_data_1 = {}
     hold_cols = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id']
-    for bout in data['bout_id'].unique():
+    tot_bouts = len(data['bout_id'].unique())
+    for bout_num, (bout) in enumerate(data['bout_id'].unique()):
+        progress(bout_num + 1, tot_bouts)  
         bout_data = data.loc[data['bout_id'] == bout]
         if len(bout_data) != 2:
             continue
@@ -554,9 +560,10 @@ def post_pred_data():
     pred_data_1.rename(columns = {'won_diff': 'winner'}, inplace = True)
     pred_data_1.rename(columns = {'length_avg': 'length'}, inplace = True)
 
-
+    print('Processing Red Corner data')
     pred_data_2 = {}
-    for bout in data['bout_id'].unique():
+    for bout_num, (bout) in enumerate(data['bout_id'].unique()):
+        progress(bout_num + 1, tot_bouts)  
         bout_data = data.loc[data['bout_id'] == bout]
         if len(bout_data) != 2:
             continue
@@ -584,6 +591,7 @@ def post_pred_data():
             bout_preds[k] = v
         bout_preds.pop('bout_id')
         pred_data_2[bout] = bout_preds
+    print('Combing and storing data')
     pred_data_2 = pd.DataFrame.from_dict(pred_data_2).T
     pred_data_2.reset_index(inplace = True)
     pred_data_2.rename(columns = {'index':'bout_id'}, inplace = True)
@@ -1450,7 +1458,7 @@ def update_base_data():
     
 
 #hgds
-if __name__ == '__main__':
-#    update_base_data()
-#    update_deriv()
-    post_pred_data()
+#if __name__ == '__main__':
+##    update_base_data()
+##    update_deriv()
+#    post_pred_data()
