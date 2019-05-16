@@ -257,7 +257,8 @@ def odds_converter(odds):
     elif odds[0] == '-':
         imp_prob = (int(odds[1:])) / ((int(odds[1:]))+100)
     return(imp_prob)
-    
+  
+mklnblk
 
 PRED_X, META_X= pull_pred_data()
 

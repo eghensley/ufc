@@ -19,7 +19,7 @@ from _connections import db_connection
 from pop_psql import pg_query
 
 def pull_test_data(domain):
-    PSQL = db_connection('psql')
+#    PSQL = db_connection('psql')
 
     pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', '%s_data_test.csv' % (domain)))
     
@@ -31,13 +31,13 @@ def pull_test_data(domain):
     
     PRED_X = pred_data_winner[[i for i in list(pred_data_winner) if i != domain]]
 
-    bouts = pg_query(PSQL.client, "select b.bout_id, weight_desc from ufc.bouts b join ufc.bout_results br on br.bout_id = b.bout_id join ufc.fights f on f.fight_id = b.fight_id join ufc.weights w on b.weight_id = w.weight_id")
-    bouts.columns = ['bout_id', 'weight_id']
-    weights = pd.get_dummies(bouts['weight_id'])
-    weights['index'] = bouts['bout_id']
-    weights.drop_duplicates(inplace = True)
-    weights.set_index('index', inplace = True) 
-    META_X = PRED_X.join(weights)
+#    bouts = pg_query(PSQL.client, "select b.bout_id, weight_desc from ufc.bouts b join ufc.bout_results br on br.bout_id = b.bout_id join ufc.fights f on f.fight_id = b.fight_id join ufc.weights w on b.weight_id = w.weight_id")
+#    bouts.columns = ['bout_id', 'weight_id']
+#    weights = pd.get_dummies(bouts['weight_id'])
+#    weights['index'] = bouts['bout_id']
+#    weights.drop_duplicates(inplace = True)
+#    weights.set_index('index', inplace = True) 
+#    META_X = PRED_X.join(weights)
 
     
     if domain == 'length':
@@ -45,7 +45,7 @@ def pull_test_data(domain):
     elif domain == 'winner':
         Y = pred_data_winner[domain].apply(lambda x: x if x == 1 else 0)
     
-    return(PRED_X, META_X, Y)
+    return(PRED_X, Y)
     
     
 def pull_models(domain):

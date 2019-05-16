@@ -12,21 +12,35 @@ sys.path.insert(2, os.path.join(cur_path, 'lib','LightGBM', 'python-package'))
 from sklearn.pipeline import Pipeline
 import json
 from joblib import dump, load
-from model_tuning.meta_scoring_data import pull_val_data
+#from model_tuning.meta_scoring_data import pull_val_data
 import pandas as pd
 
 class FeatureSelector(object):
-
     def __init__(self, cols):
         self.cols = cols
-
     def transform(self, X):
-        return X[ self.cols ] 
-
+        return X.loc[:,self.cols ] 
     def fit(self, X, y=None):
         return self
-    
 
+
+def pull_val_data(domain):
+#    domain = 'winner'
+    pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', '%s_data_validation.csv' % (domain)))
+    pred_data_winner.set_index('bout_id', inplace = True)
+    pred_data_winner.drop('fighter_id', axis = 1, inplace = True)
+    pred_data_winner.drop('opponent_id', axis = 1, inplace = True)
+    pred_data_winner.drop('fight_date', axis = 1, inplace = True)
+    
+    X = pred_data_winner[[i for i in list(pred_data_winner) if i != domain]]
+    
+    if domain == 'length':
+        Y = pred_data_winner['length']/300
+    elif domain == 'winner':
+        Y = pred_data_winner[domain].apply(lambda x: x if x == 1 else 0)
+    
+    return(X, Y)
+    
 
 def store_estimators(domain):
     X, Y = pull_val_data(domain)
@@ -78,5 +92,5 @@ def store_error_estimators(domain):
 
 if __name__ == '__main__':
     domain = 'winner'
-#    store_estimators(domain)
-    store_error_estimators(domain)
+    store_estimators(domain)
+#    store_error_estimators(domain)
