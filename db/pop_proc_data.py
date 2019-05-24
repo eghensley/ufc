@@ -5,9 +5,14 @@ except NameError:                               # if running in IDE
     cur_path = os.getcwd()
 
 while cur_path.split('/')[-1] != 'ufc':
-    cur_path = os.path.abspath(os.path.join(cur_path, os.pardir))    
-sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
-
+    cur_path = os.path.abspath(os.path.join(cur_path, os.pardir))  
+if os.path.join(cur_path, 'lib', 'python3.7', 'site-packages') not in sys.path:  
+    sys.path.insert(1, os.path.join(cur_path, 'lib', 'python3.7', 'site-packages'))
+if os.path.join(cur_path, 'lib','LightGBM', 'python-package') not in sys.path:  
+    sys.path.insert(2, os.path.join(cur_path, 'lib','LightGBM', 'python-package'))
+if cur_path not in sys.path:  
+    sys.path.insert(1, os.path.join(cur_path))
+    
 from _connections import db_connection
 import pandas as pd
 from datetime import datetime
@@ -558,13 +563,13 @@ def pull_pred_data():
 
 #    pred_data.drop('won_avg', axis = 1, inplace = True)
     [i for i in list(pred_data) if 'len' in i]
-    pred_data_length = pred_data[[i for i in list(pred_data) if i != 'winner']]
+#    pred_data_length = pred_data[[i for i in list(pred_data) if i != 'winner']]
     pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'length']]
     
     pred_data_winner.set_index('bout_id', inplace = True)
     pred_data_winner.to_csv(os.path.join(cur_path, 'data', 'winner_data.csv'))
-    pred_data_length.set_index('bout_id', inplace = True)
-    pred_data_length.to_csv(os.path.join(cur_path, 'data', 'length_data.csv'))
+#    pred_data_length.set_index('bout_id', inplace = True)
+#    pred_data_length.to_csv(os.path.join(cur_path, 'data', 'length_data.csv'))
 
 
 def save_validation_data():
@@ -574,13 +579,20 @@ def save_validation_data():
     pred_data_winner_validation.to_csv(os.path.join(cur_path, 'data', 'winner_data_validation.csv'))
     pred_data_winner_test = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
     pred_data_winner_test.to_csv(os.path.join(cur_path, 'data', 'winner_data_test.csv'))
+
+    pred_data_winner_ens_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2018, 1, 1)]
+    pred_data_winner_ens_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_ens_training.csv'))
+
+    pred_data_winner_est_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2018, 1, 1)]
+    pred_data_winner_est_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_est_training.csv'))
+
     
-    pred_data_length = pd.read_csv(os.path.join(cur_path, 'data', 'length_data.csv'))
-    pred_data_length.set_index('bout_id', inplace = True)
-    pred_data_length_validation = pred_data_length.loc[pred_data_length['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2019, 1, 1)]
-    pred_data_length_validation.to_csv(os.path.join(cur_path, 'data', 'length_data_validation.csv'))
-    pred_data_length_test = pred_data_length.loc[pred_data_length['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
-    pred_data_length_test.to_csv(os.path.join(cur_path, 'data', 'length_data_test.csv'))
+#    pred_data_length = pd.read_csv(os.path.join(cur_path, 'data', 'length_data.csv'))
+#    pred_data_length.set_index('bout_id', inplace = True)
+#    pred_data_length_validation = pred_data_length.loc[pred_data_length['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2019, 1, 1)]
+#    pred_data_length_validation.to_csv(os.path.join(cur_path, 'data', 'length_data_validation.csv'))
+#    pred_data_length_test = pred_data_length.loc[pred_data_length['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
+#    pred_data_length_test.to_csv(os.path.join(cur_path, 'data', 'length_data_test.csv'))
 
 
 

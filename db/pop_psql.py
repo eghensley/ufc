@@ -25,7 +25,6 @@ from copy import deepcopy
 PSQL = db_connection('psql')
 cols = ['kd','ssa','sss','tsa','tss','sub','pas','rev','headssa','headsss','bodyssa', 'bodysss','legssa','legsss','disssa','dissss','clinssa','clinsss','gndssa','gndsss','tda','tds']
 
-print(os.path.join(cur_path, 'data', 'winner_data.csv'))
 def pg_create_table(cur, table_name):  
 #    cur, table_name = _psql, 
     try:
@@ -623,6 +622,15 @@ def save_validation_data():
 #    pred_data_length_validation.to_csv(os.path.join(cur_path, 'data', 'length_data_validation.csv'))
 #    pred_data_length_test = pred_data_length.loc[pred_data_length['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
 #    pred_data_length_test.to_csv(os.path.join(cur_path, 'data', 'length_data_test.csv'))
+
+
+def partition_val_data():
+    pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', 'winner_data_validation.csv'))
+    pred_data_winner.set_index('bout_id', inplace = True)  
+    pred_data_winner_est_training = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2018, 1, 1)]
+    pred_data_winner_est_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_est_training.csv'))
+    pred_data_winner_ens_training = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2018, 1, 1)]
+    pred_data_winner_ens_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_ens_training.csv'))
 
 
 def odds_converter(odds):
@@ -1461,4 +1469,5 @@ def update_base_data():
 if __name__ == '__main__':
 #    update_base_data()
 #    update_deriv()
-    post_pred_data()
+#    post_pred_data()
+    save_validation_data()
