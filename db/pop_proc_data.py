@@ -336,9 +336,11 @@ def pull_adj_avg_data():
     return(data)        
 
 
-def pull_pred_data():
+def pull_pred_data(only_avg = False):
+    only_avg = True
     avg_data = pull_avg_data()
-    adj_avg_data = pull_adj_avg_data()
+    if not only_avg:
+        adj_avg_data = pull_adj_avg_data()
     
     acc_stat_dict = {'acc_ss': ['ssa', 'sss'],
                        'acc_headss': ['headssa', 'headsss'],
@@ -366,20 +368,23 @@ def pull_pred_data():
         avg_data['avg_o_'+k+'_s'] = (avg_data['avg_o_'+v[1]]/avg_data['avg_o_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
         avg_data['avg_d_'+k+'_s'] = (avg_data['avg_d_'+v[1]]/avg_data['avg_d_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
     
+    if not only_avg:
+        for k, v in acc_stat_dict.items():
+            adj_avg_data['adj_avg_o_'+k] = (adj_avg_data['adj_avg_o_'+v[1]] / adj_avg_data['adj_avg_o_'+v[0]]).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
+            adj_avg_data['adj_avg_d_'+k] = (adj_avg_data['adj_avg_d_'+v[1]] / adj_avg_data['adj_avg_d_'+v[0]]).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
+        
+        for k, v in share_ss_dict.items():
+            adj_avg_data['adj_avg_o_'+k+'_a'] = (adj_avg_data['adj_avg_o_'+v[0]]/adj_avg_data['adj_avg_o_'+'ssa']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
+            adj_avg_data['adj_avg_d_'+k+'_a'] = (adj_avg_data['adj_avg_d_'+v[0]]/adj_avg_data['adj_avg_d_'+'ssa']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
+        
+            adj_avg_data['adj_avg_o_'+k+'_s'] = (adj_avg_data['adj_avg_o_'+v[1]]/adj_avg_data['adj_avg_o_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
+            adj_avg_data['adj_avg_d_'+k+'_s'] = (adj_avg_data['adj_avg_d_'+v[1]]/adj_avg_data['adj_avg_d_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
+        
+        
+        data = pd.merge(avg_data, adj_avg_data, left_on = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id'], right_on = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id'])
+    else:
+        data = avg_data
     
-    for k, v in acc_stat_dict.items():
-        adj_avg_data['adj_avg_o_'+k] = (adj_avg_data['adj_avg_o_'+v[1]] / adj_avg_data['adj_avg_o_'+v[0]]).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
-        adj_avg_data['adj_avg_d_'+k] = (adj_avg_data['adj_avg_d_'+v[1]] / adj_avg_data['adj_avg_d_'+v[0]]).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
-    
-    for k, v in share_ss_dict.items():
-        adj_avg_data['adj_avg_o_'+k+'_a'] = (adj_avg_data['adj_avg_o_'+v[0]]/adj_avg_data['adj_avg_o_'+'ssa']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
-        adj_avg_data['adj_avg_d_'+k+'_a'] = (adj_avg_data['adj_avg_d_'+v[0]]/adj_avg_data['adj_avg_d_'+'ssa']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
-    
-        adj_avg_data['adj_avg_o_'+k+'_s'] = (adj_avg_data['adj_avg_o_'+v[1]]/adj_avg_data['adj_avg_o_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
-        adj_avg_data['adj_avg_d_'+k+'_s'] = (adj_avg_data['adj_avg_d_'+v[1]]/adj_avg_data['adj_avg_d_'+'sss']).apply(lambda x: x if x == x and x not in [np.inf, -np.inf] else 0)
-    
-    
-    data = pd.merge(avg_data, adj_avg_data, left_on = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id'], right_on = ['bout_id', 'fighter_id', 'fight_date', 'opponent_id'])
     data.dropna(inplace = True)
     fighters = pg_query(PSQL.client, 'select fighter_id, height, reach, stance, dob from ufc.fighters')
     fighters.columns = ['fighter_id', 'height', 'reach', 'stance', 'dob']
@@ -567,24 +572,42 @@ def pull_pred_data():
     pred_data_winner = pred_data[[i for i in list(pred_data) if i != 'length']]
     
     pred_data_winner.set_index('bout_id', inplace = True)
-    pred_data_winner.to_csv(os.path.join(cur_path, 'data', 'winner_data.csv'))
+    if only_avg:
+        pred_data_winner.to_csv(os.path.join(cur_path, 'data', 'only_avg', 'winner_data.csv'))
+    else:
+        pred_data_winner.to_csv(os.path.join(cur_path, 'data', 'winner_data.csv'))
+
 #    pred_data_length.set_index('bout_id', inplace = True)
 #    pred_data_length.to_csv(os.path.join(cur_path, 'data', 'length_data.csv'))
 
 
-def save_validation_data():
-    pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', 'winner_data.csv'))
-    pred_data_winner.set_index('bout_id', inplace = True)  
-    pred_data_winner_validation = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2019, 1, 1)]
-    pred_data_winner_validation.to_csv(os.path.join(cur_path, 'data', 'winner_data_validation.csv'))
-    pred_data_winner_test = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
-    pred_data_winner_test.to_csv(os.path.join(cur_path, 'data', 'winner_data_test.csv'))
-
-    pred_data_winner_ens_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2018, 1, 1)]
-    pred_data_winner_ens_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_ens_training.csv'))
-
-    pred_data_winner_est_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2018, 1, 1)]
-    pred_data_winner_est_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_est_training.csv'))
+def save_validation_data(only_avg = False):
+    if only_avg:
+        pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', 'only_avg', 'winner_data.csv'))
+        pred_data_winner.set_index('bout_id', inplace = True)  
+        pred_data_winner_validation = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2019, 1, 1)]
+        pred_data_winner_validation.to_csv(os.path.join(cur_path, 'data', 'only_avg', 'winner_data_validation.csv'))
+        pred_data_winner_test = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
+        pred_data_winner_test.to_csv(os.path.join(cur_path, 'data', 'only_avg', 'winner_data_test.csv'))
+    
+        pred_data_winner_ens_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2018, 1, 1)]
+        pred_data_winner_ens_training.to_csv(os.path.join(cur_path, 'data', 'only_avg', 'pred_data_winner_ens_training.csv'))
+    
+        pred_data_winner_est_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2018, 1, 1)]
+        pred_data_winner_est_training.to_csv(os.path.join(cur_path, 'data', 'only_avg', 'pred_data_winner_est_training.csv'))
+    else:
+        pred_data_winner = pd.read_csv(os.path.join(cur_path, 'data', 'winner_data.csv'))
+        pred_data_winner.set_index('bout_id', inplace = True)  
+        pred_data_winner_validation = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2019, 1, 1)]
+        pred_data_winner_validation.to_csv(os.path.join(cur_path, 'data', 'winner_data_validation.csv'))
+        pred_data_winner_test = pred_data_winner.loc[pred_data_winner['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
+        pred_data_winner_test.to_csv(os.path.join(cur_path, 'data', 'winner_data_test.csv'))
+    
+        pred_data_winner_ens_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2018, 1, 1)]
+        pred_data_winner_ens_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_ens_training.csv'))
+    
+        pred_data_winner_est_training = pred_data_winner_validation.loc[pred_data_winner_validation['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2018, 1, 1)]
+        pred_data_winner_est_training.to_csv(os.path.join(cur_path, 'data', 'pred_data_winner_est_training.csv'))
 
     
 #    pred_data_length = pd.read_csv(os.path.join(cur_path, 'data', 'length_data.csv'))

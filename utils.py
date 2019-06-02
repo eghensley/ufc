@@ -96,21 +96,21 @@ def cross_validate(x,y,est, only_scores = True, njobs = -1, verbose = False):
     return(results)
         
         
-def _save_scores(dimen, mod, res, stg, final = False):
+def _save_scores(dimen, mod, res, stg, final = False, extension=''):
 #    dimen, mod, res, stg, final = dim, name, checkpoint, stage, final
     if final:
         result_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dimen, 'final', 'results')
     else:
         result_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dimen, 'tuning', 'results')
     ensure_dir(result_folder)    
-    if os.path.isfile(os.path.join(result_folder, '%s.json' % (mod))):
-        with open(os.path.join(result_folder, '%s.json' % (mod)), 'r') as fp:
+    if os.path.isfile(os.path.join(result_folder, '%s.json' % (mod+extension))):
+        with open(os.path.join(result_folder, '%s.json' % (mod+extension)), 'r') as fp:
             scores = json.load(fp)
         scores[stg] = res
-        with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
+        with open(os.path.join(result_folder, '%s.json' % (mod+extension)), 'w') as fp:
             json.dump(scores, fp)
     else:
-        with open(os.path.join(result_folder, '%s.json' % (mod)), 'w') as fp:
+        with open(os.path.join(result_folder, '%s.json' % (mod+extension)), 'w') as fp:
             json.dump({stg: res}, fp)
             
 
@@ -169,16 +169,16 @@ def _save_scores(dimen, mod, res, stg, final = False):
 #    _save_meta_feats(dim, preddim, name, features, stage, final) 
 
             
-def _save_model(stage, dim, name, model, checkpoint, final = False):
+def _save_model(stage, dim, name, model, checkpoint, final = False, extension = ''):
 #    stage, dim, name, model, scale, checkpoint, features, final = stage, 'winner', name, log_clf, scale, log_checkpoint_score, features, False
     print('Storing Stage %s %s %s Model' % (stage, dim, name))
     if final:
-        model_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dim, 'final', 'models', name)
+        model_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dim, 'final', 'models', name+extension)
     else:
-        model_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dim, 'tuning', 'models', name)        
+        model_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dim, 'tuning', 'models', name+extension)        
     ensure_dir(model_folder)
     dump(model, os.path.join(model_folder, '%s.pkl' % (stage)))    
-    _save_scores(dim, name, checkpoint, stage, final) 
+    _save_scores(dim, name, checkpoint, stage, final, extension = extension) 
 
     
 def _single_core_eval(input_vals):
@@ -268,19 +268,19 @@ def test_solver(x, y, clf, prev_score, verbose = False):
         return(clf, prev_score)         
         
         
-def stage_init(name, dimension):
+def stage_init(name, dimension, extension = ''):
 #    name, dimension = name, dimension
-    final_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dimension, 'final', 'models', name)
+    final_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dimension, 'final', 'models', name+extension)
     if os.path.isdir(final_folder):
         return(np.nan, False, False)
     else:
-        model_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dimension, 'tuning', 'models', name)
+        model_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dimension, 'tuning', 'models', name+extension)
         if os.path.isdir(model_folder):
             stored_models = os.listdir(model_folder)
             prev_stage = max([int(i.replace('.pkl', '')) for i in stored_models])
             mod = load(os.path.join(model_folder, '%s.pkl' % (prev_stage)))
             results_folder = os.path.join(cur_path, 'model_tuning', 'modelling', dimension, 'tuning', 'results')
-            with open(os.path.join(results_folder, '%s.json' % (name)), 'r') as fp:
+            with open(os.path.join(results_folder, '%s.json' % (name+extension)), 'r') as fp:
                 result = json.load(fp)[str(prev_stage)]
             return(prev_stage + 1, mod, result)  
         else:
