@@ -514,7 +514,7 @@ def tune_knn():
 if __name__ == '__main__':
     for i in range(1):
         tune_lgb()
-        tune_log()
+#        tune_log()
 #        tune_linsvc()
 #        tune_rbfsvc()
         tune_dart()
