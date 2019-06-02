@@ -16,18 +16,18 @@ if cur_path not in sys.path:
 
 import pandas as pd
 import numpy as np
-from copy import deepcopy
-from gaus_proc import bayesian_optimisation
+#from copy import deepcopy
+#from gaus_proc import bayesian_optimisation
 try:
     import matplotlib.pyplot as plt
 except:
     pass
-import random
-from progress_bar import progress
-import json
+#import random
+#from progress_bar import progress
+#import json
 from Simple import SimpleTuner
 from joblib import load, dump
-from sklearn.linear_model import LogisticRegression
+#from sklearn.linear_model import LogisticRegression
 #from _connections import db_connection
 #from db.pop_psql import pg_query
 from datetime import datetime
@@ -345,7 +345,7 @@ def _add_hist_res(training_loss, test_loss, training_acc, test_acc, history):
     return(training_loss, test_loss, training_acc, test_acc)
 
 
-def _gen_new_data(data, feature_splitter):
+def _gen_new_data(model, data, feature_splitter):
     feat_train_data, ens_data = _split(data, feature_splitter)
     ens_train_data, ens_validation_data = _split(ens_data, feature_splitter)
     _add_fit_models(model, feat_train_data)
@@ -355,31 +355,32 @@ def _gen_new_data(data, feature_splitter):
     return(ens_x_train, ens_y_train, ens_x_val, ens_y_val)
 
 
-def _rec_progress(training_loss, test_loss, training_acc, test_acc, history):
+def _rec_progress(training_loss, test_loss, training_acc, test_acc, history, show = False):
     training_loss, test_loss, training_acc, test_acc = _add_hist_res(training_loss, test_loss, training_acc, test_acc, history)
     
     # Create count of the number of epochs
-    epoch_count = range(1, len(training_loss) + 1)
-    fig, ax1 = plt.subplots()
-    
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Log Loss')
-    ax1.plot(epoch_count, training_loss, 'b--', label = 'Training Loss')
-    ax1.plot(epoch_count, test_loss, 'b-', label = 'Validation Loss')
-    ax1.tick_params(axis='y')
-    ax1.legend(loc=0)
-    
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    
-    ax2.set_ylabel('Accuracy') 
-    ax2.plot(epoch_count, training_acc, 'r--', label = 'Training Accuracy')
-    ax2.plot(epoch_count, test_acc, 'r-', label = 'Validation Accuracy')
-    
-    ax2.tick_params(axis='y')
-    ax2.legend(loc=1)
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    plt.show()
-    
+    if show:
+        epoch_count = range(1, len(training_loss) + 1)
+        fig, ax1 = plt.subplots()
+        
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Log Loss')
+        ax1.plot(epoch_count, training_loss, 'b--', alpha = .5, label = 'Training Loss')
+        ax1.plot(epoch_count, test_loss, 'b-', alpha = .8, label = 'Validation Loss')
+        ax1.tick_params(axis='y')
+        ax1.legend(loc=0)
+        
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        
+        ax2.set_ylabel('Accuracy') 
+        ax2.plot(epoch_count, training_acc, 'r--', alpha = .5, label = 'Training Accuracy')
+        ax2.plot(epoch_count, test_acc, 'r-', alpha = .8, label = 'Validation Accuracy')
+        
+        ax2.tick_params(axis='y')
+        ax2.legend(loc=1)
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
+        plt.show()
+        
     return(training_loss, test_loss, training_acc, test_acc)
 
 
@@ -412,7 +413,8 @@ early_stop = EarlyStopping(
         # "no longer improving" being defined as "no better than 1e-2 less"
         min_delta=1e-4,
         # "no longer improving" being further defined as "for at least 2 epochs"
-        patience=3,
+        mode = 'max',
+        patience=5,
         verbose=0)
 
     
@@ -421,12 +423,19 @@ model = ensembled_predictor()
 data = pd.read_csv(os.path.join(cur_path, 'data', 'winner_data.csv'))    
 data = data.sort_values('bout_id').set_index(['bout_id', 'fighter_id'])
 data['winner'] = data['winner'].apply(lambda x: 0 if x == -1 else x)
+new_data = data.loc[data['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) >= datetime(2019, 1, 1)]
+
 data = data.loc[data['fight_date'].apply(lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d')) < datetime(2019, 1, 1)]
-feature_splitter = StratifiedShuffleSplit(n_splits = 1, test_size = .2)
+feature_splitter = StratifiedShuffleSplit(n_splits = 1, test_size = .5)
 training_loss, test_loss, training_acc, test_acc = [], [], [], []
 
-for i in range(20):
-    ens_x_train, ens_y_train, ens_x_val, ens_y_val = _gen_new_data(data, feature_splitter)
+holdout_loss, holdout_acc = [], []
+avg_training_loss, avg_test_loss, avg_training_acc, avg_test_acc = [], [], [], []
+
+for i in range(2000):
+    ens_x_train, ens_y_train, ens_x_val, ens_y_val = _gen_new_data(model, data, feature_splitter)
+    ens_x_new, ens_y_new = _comb_feature_pred(model, new_data), new_data['winner']
+
     history = ensemble.fit(ens_x_train, ens_y_train, 
                    batch_size=20, 
                    epochs=10,
@@ -434,7 +443,36 @@ for i in range(20):
                    callbacks=[early_stop],
                    verbose = 0)
     training_loss, test_loss, training_acc, test_acc = _rec_progress(training_loss, test_loss, training_acc, test_acc, history)
+    eval_loss, eval_acc = ensemble.evaluate(ens_x_new, ens_y_new, verbose = 0)
+    holdout_loss.append(eval_loss)
+    holdout_acc.append(eval_acc)
+    avg_training_loss.append(np.mean(history.history['loss']))
+    avg_test_loss.append(np.mean(history.history['val_loss']))
+    avg_training_acc.append(np.mean(history.history['acc']))
+    avg_test_acc.append(np.mean(history.history['val_acc']))
     
+    epoch_count = range(1, i + 502)
+    fig, ax1 = plt.subplots()
+    
+    ax1.set_xlabel('Iteration')
+    ax1.set_ylabel('Log Loss')
+    ax1.plot(epoch_count, avg_training_loss, 'b:', alpha = .3, label = 'Avg Training Loss')
+    ax1.plot(epoch_count, avg_test_loss, 'b--', alpha = .5, label = 'Avg Validation Loss')
+    ax1.plot(epoch_count, holdout_loss, 'b-', alpha = 1, label = 'Test Loss')
+    ax1.tick_params(axis='y')
+    ax1.legend(loc=0)
+    
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    
+    ax2.set_ylabel('Accuracy') 
+    ax2.plot(epoch_count, avg_training_acc, 'r:', alpha = .3, label = 'Avg Training Accuracy')
+    ax2.plot(epoch_count, avg_test_acc, 'r--', alpha = .5, label = 'Avg Validation Accuracy')
+    ax2.plot(epoch_count, holdout_acc, 'r-', alpha = 1, label = 'Test Accuracy')
+    
+    ax2.tick_params(axis='y')
+    ax2.legend(loc=1)
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.show()
 
 
 #from sklearn.linear_model import LogisticRegressionCV
