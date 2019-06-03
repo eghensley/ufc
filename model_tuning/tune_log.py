@@ -514,11 +514,11 @@ def tune_knn():
 if __name__ == '__main__':
     for i in range(20):
 #        tune_lgb()
-        tune_log()
+#        tune_log()
 #        tune_linsvc()
 #        tune_rbfsvc()
 #        tune_dart()
-#        tune_rf()
+        tune_rf()
 #        tune_polysvc()
 #        tune_knn()
 
