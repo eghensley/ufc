@@ -513,17 +513,14 @@ def tune_knn():
 
 if __name__ == '__main__':
     for i in range(20):
-#        tune_lgb()
+        tune_lgb()
 #        tune_log()
 #        tune_linsvc()
 #        tune_rbfsvc()
-<<<<<<< HEAD
         tune_dart()
 #        tune_rf()
-=======
 #        tune_dart()
-        tune_rf()
->>>>>>> 6c00bdc67b9344755d83efb5b3933c78e65542f6
+#        tune_rf()
 #        tune_polysvc()
 #        tune_knn()
 
