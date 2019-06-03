@@ -517,8 +517,13 @@ if __name__ == '__main__':
 #        tune_log()
 #        tune_linsvc()
 #        tune_rbfsvc()
+<<<<<<< HEAD
         tune_dart()
 #        tune_rf()
+=======
+#        tune_dart()
+        tune_rf()
+>>>>>>> 6c00bdc67b9344755d83efb5b3933c78e65542f6
 #        tune_polysvc()
 #        tune_knn()
 
